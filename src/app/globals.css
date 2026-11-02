@@ -1,0 +1,226 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: #f5f8fc;
+  color: #142b4a;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button,
+a,
+summary,
+input,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: #dceaff;
+  color: #142b4a;
+}
+
+.container-page {
+  width: min(100% - 2rem, 72rem);
+  margin-inline: auto;
+}
+
+.nav-link {
+  border-radius: 0.375rem;
+  color: #475569;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: color 150ms ease;
+}
+
+.nav-link:hover,
+.mobile-nav-link:hover {
+  color: #2878e5;
+}
+
+.mobile-nav-link {
+  border-radius: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  color: #142b4a;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.hero {
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 87% 15%, rgb(40 120 229 / 18%), transparent 31%),
+    linear-gradient(120deg, #142b4a 0%, #173c6a 68%, #1d568f 100%);
+}
+
+.eyebrow {
+  color: #2878e5;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.hero .eyebrow {
+  color: #a9ccff;
+}
+
+.hero-button {
+  display: inline-flex;
+  min-height: 2.9rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.75rem;
+  background: #fff;
+  padding: 0.65rem 1rem;
+  color: #142b4a;
+  font-size: 0.9rem;
+  font-weight: 700;
+  transition: transform 150ms ease, background 150ms ease;
+}
+
+.hero-button:hover {
+  transform: translateY(-1px);
+  background: #eaf2ff;
+}
+
+.section-title {
+  color: #142b4a;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+}
+
+.content-section {
+  margin-top: 2.5rem;
+}
+
+.tool-card {
+  display: block;
+  min-height: 10.25rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  background: #fff;
+  padding: 1.25rem;
+  box-shadow: 0 2px 8px rgb(20 43 74 / 4%);
+  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+
+.tool-card:hover {
+  transform: translateY(-2px);
+  border-color: #b6d2fb;
+  box-shadow: 0 8px 24px rgb(20 43 74 / 8%);
+}
+
+.search-input,
+.form-input {
+  width: 100%;
+  min-height: 3rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.75rem;
+  background: #fff;
+  padding: 0.75rem 1rem;
+  color: #142b4a;
+  outline: none;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.search-input {
+  min-height: 3.5rem;
+  padding-left: 2.9rem;
+}
+
+.form-input:focus,
+.search-input:focus {
+  border-color: #2878e5;
+  box-shadow: 0 0 0 3px rgb(40 120 229 / 15%);
+}
+
+.form-input::placeholder,
+.search-input::placeholder {
+  color: #94a3b8;
+}
+
+.filter-chip {
+  min-height: 2.35rem;
+  border: 1px solid #dbe3ee;
+  border-radius: 9999px;
+  background: #fff;
+  padding: 0.4rem 0.85rem;
+  color: #475569;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.filter-chip:hover {
+  border-color: #9fc2f6;
+  color: #1d5eae;
+}
+
+.filter-chip-active {
+  border-color: #2878e5;
+  background: #2878e5;
+  color: #fff;
+}
+
+.primary-button {
+  display: inline-flex;
+  min-height: 3rem;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 0.75rem;
+  background: #2878e5;
+  padding: 0.7rem 1.35rem;
+  color: #fff;
+  font-weight: 700;
+  transition: background 150ms ease, transform 150ms ease;
+}
+
+.primary-button:hover {
+  transform: translateY(-1px);
+  background: #1d63c2;
+}
+
+.ad-slot {
+  display: grid;
+  min-height: 5rem;
+  place-items: center;
+  border: 1px dashed #cbd5e1;
+  border-radius: 0.75rem;
+  background: #fff;
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

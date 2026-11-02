@@ -1,0 +1,290 @@
+export type CalculatorResult = {
+  label: string;
+  value: number;
+  unit?: string;
+  displayValue?: string;
+  details?: string[];
+};
+
+export type CalculatorValues = Record<string, string>;
+
+const requiredNumber = (values: CalculatorValues, key: string, label = key): number => {
+  const raw = values[key]?.trim();
+  if (!raw) throw new Error(`${label} alanını doldurun.`);
+  const value = parseTurkishNumber(raw);
+  if (!Number.isFinite(value)) throw new Error(`${label} için geçerli bir sayı girin.`);
+  return value;
+};
+
+export function parseTurkishNumber(raw: string): number {
+  const normalized = raw.trim().replace(/\s/g, "");
+  if (!normalized) return Number.NaN;
+  if (normalized.includes(",") && !/^-?(?:\d+|\d{1,3}(?:\.\d{3})+),\d+$/.test(normalized)) return Number.NaN;
+  const withDecimal = normalized.includes(",")
+    ? normalized.replace(/\./g, "").replace(",", ".")
+    : /^\-?\d{1,3}(\.\d{3})+$/.test(normalized)
+      ? normalized.replace(/\./g, "")
+      : normalized;
+  if (!/^-?\d+(\.\d+)?$/.test(withDecimal)) return Number.NaN;
+  return Number(withDecimal);
+}
+
+export function formatTurkishNumber(value: number, maximumFractionDigits = 2): string {
+  return new Intl.NumberFormat("tr-TR", { maximumFractionDigits }).format(value);
+}
+
+export function parseDate(value: string, label = "Tarih"): Date {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new Error(`${label} için geçerli bir tarih seçin.`);
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) {
+    throw new Error(`${label} geçerli bir takvim tarihi değil.`);
+  }
+  return date;
+}
+
+const dateValue = (values: CalculatorValues, key: string, label: string): Date => {
+  const value = values[key]?.trim();
+  if (!value) throw new Error(`${label} alanını doldurun.`);
+  return parseDate(value, label);
+};
+
+const result = (label: string, value: number, unit?: string, details?: string[]): CalculatorResult => {
+  if (!Number.isFinite(value)) throw new Error("Bu değerlerle sonuç hesaplanamıyor. Girdilerinizi kontrol edin.");
+  return { label, value, unit, details };
+};
+
+export function calculatePercentage(values: CalculatorValues): CalculatorResult {
+  const amount = requiredNumber(values, "amount", "Tutar");
+  const percent = requiredNumber(values, "percent", "Yüzde");
+  return result("Sonuç", amount * percent / 100, "", [`${formatTurkishNumber(amount)} tutarının %${formatTurkishNumber(percent)}'i`]);
+}
+
+export function calculateSalaryRaise(values: CalculatorValues): CalculatorResult {
+  const salary = requiredNumber(values, "salary", "Mevcut maaş");
+  const percent = requiredNumber(values, "percent", "Zam oranı");
+  if (salary < 0 || percent < 0) throw new Error("Maaş ve zam oranı negatif olamaz.");
+  const increase = salary * percent / 100;
+  return result("Zamlı maaş", salary + increase, "₺", [`Zam tutarı: ${formatTurkishNumber(increase)} ₺`]);
+}
+
+export function calculateDiscount(values: CalculatorValues): CalculatorResult {
+  const amount = requiredNumber(values, "amount", "Ürün fiyatı");
+  const percent = requiredNumber(values, "percent", "İndirim oranı");
+  if (amount < 0 || percent < 0 || percent > 100) throw new Error("Fiyat negatif olamaz; indirim oranı %0 ile %100 arasında olmalıdır.");
+  const discount = amount * percent / 100;
+  return result("İndirimli fiyat", amount - discount, "₺", [`İndirim tutarı: ${formatTurkishNumber(discount)} ₺`]);
+}
+
+export function calculateVat(values: CalculatorValues): CalculatorResult {
+  const amount = requiredNumber(values, "amount", "KDV hariç tutar");
+  const rate = requiredNumber(values, "rate", "KDV oranı");
+  if (amount < 0 || rate < 0) throw new Error("Tutar ve KDV oranı negatif olamaz.");
+  const tax = amount * rate / 100;
+  return result("KDV dahil tutar", amount + tax, "₺", [`KDV tutarı: ${formatTurkishNumber(tax)} ₺`]);
+}
+
+export function calculateProfitLoss(values: CalculatorValues): CalculatorResult {
+  const cost = requiredNumber(values, "cost", "Alış fiyatı");
+  const sale = requiredNumber(values, "sale", "Satış fiyatı");
+  if (cost < 0 || sale < 0) throw new Error("Fiyatlar negatif olamaz.");
+  const difference = sale - cost;
+  const percent = cost === 0 ? 0 : difference / cost * 100;
+  const ratio = cost === 0
+    ? "Alış fiyatı sıfır olduğundan yüzde oranı hesaplanamaz."
+    : `Alış fiyatına göre ${difference >= 0 ? "kâr" : "zarar"} oranı: %${formatTurkishNumber(Math.abs(percent))}`;
+  return result(difference >= 0 ? "Kâr" : "Zarar", Math.abs(difference), "₺", [ratio]);
+}
+
+export function calculateSalaryIncrease(values: CalculatorValues): CalculatorResult {
+  const salary = requiredNumber(values, "salary", "Mevcut maaş");
+  const increase = requiredNumber(values, "increase", "Artış tutarı");
+  if (salary < 0 || increase < 0) throw new Error("Maaş ve artış tutarı negatif olamaz.");
+  const percent = salary === 0 ? 0 : increase / salary * 100;
+  return result("Yeni maaş", salary + increase, "₺", [
+    salary === 0 ? "Mevcut maaş sıfır olduğundan artış oranı hesaplanamaz." : `Artış oranı: %${formatTurkishNumber(percent)}`
+  ]);
+}
+
+const todayUtc = (now: Date): Date => new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+
+export function calculateAge(values: CalculatorValues, now = new Date()): CalculatorResult {
+  const birth = dateValue(values, "birthDate", "Doğum tarihi");
+  const today = todayUtc(now);
+  if (birth > today) throw new Error("Doğum tarihi gelecekte olamaz.");
+  let age = today.getUTCFullYear() - birth.getUTCFullYear();
+  const birthMonth = birth.getUTCMonth();
+  const birthDay = birthMonth === 1 && birth.getUTCDate() === 29 && !isLeapYear(today.getUTCFullYear())
+    ? 28
+    : birth.getUTCDate();
+  const monthDiff = today.getUTCMonth() - birthMonth;
+  if (monthDiff < 0 || (monthDiff === 0 && today.getUTCDate() < birthDay)) age--;
+  return result("Yaşınız", age, "yıl");
+}
+
+export function calculateDateDifference(values: CalculatorValues): CalculatorResult {
+  const start = dateValue(values, "startDate", "Başlangıç tarihi");
+  const end = dateValue(values, "endDate", "Bitiş tarihi");
+  return result("Gün farkı", Math.abs(end.getTime() - start.getTime()) / 86_400_000, "gün");
+}
+
+function calculateDateOffset(values: CalculatorValues, direction: 1 | -1): CalculatorResult {
+  const date = dateValue(values, "date", "Başlangıç tarihi");
+  const days = requiredNumber(values, "days", "Gün sayısı");
+  if (!Number.isSafeInteger(days) || days < 0) throw new Error("Gün sayısı sıfır veya daha büyük bir tam sayı olmalıdır.");
+  date.setUTCDate(date.getUTCDate() + direction * days);
+  if (!Number.isFinite(date.getTime())) throw new Error("Hesaplanan tarih desteklenen takvim aralığının dışında.");
+  const displayValue = `${date.getUTCDate().toString().padStart(2, "0")}.${(date.getUTCMonth() + 1).toString().padStart(2, "0")}.${date.getUTCFullYear()}`;
+  return { label: "Yeni tarih", value: date.getTime(), displayValue };
+}
+
+export function calculateAddDays(values: CalculatorValues): CalculatorResult {
+  return calculateDateOffset(values, 1);
+}
+
+export function calculateSubtractDays(values: CalculatorValues): CalculatorResult {
+  return calculateDateOffset(values, -1);
+}
+
+export function calculateDaysUntilBirthday(values: CalculatorValues, now = new Date()): CalculatorResult {
+  const birth = dateValue(values, "birthDate", "Doğum tarihi");
+  const today = todayUtc(now);
+  if (birth > today) throw new Error("Doğum tarihi gelecekte olamaz.");
+  let year = today.getUTCFullYear();
+  const month = birth.getUTCMonth();
+  let day = birth.getUTCDate();
+  if (month === 1 && day === 29 && !isLeapYear(year)) day = 28;
+  let nextBirthday = new Date(Date.UTC(year, month, day));
+  if (nextBirthday < today) {
+    year++;
+    day = month === 1 && birth.getUTCDate() === 29 && !isLeapYear(year) ? 28 : birth.getUTCDate();
+    nextBirthday = new Date(Date.UTC(year, month, day));
+  }
+  return result("Kalan süre", (nextBirthday.getTime() - today.getTime()) / 86_400_000, "gün");
+}
+
+export function calculateGradeAverage(values: CalculatorValues): CalculatorResult {
+  const first = requiredNumber(values, "grade1", "1. not");
+  const second = requiredNumber(values, "grade2", "2. not");
+  if (first < 0 || second < 0 || first > 100 || second > 100) throw new Error("Notlar 0 ile 100 arasında olmalıdır.");
+  return result("Not ortalaması", (first + second) / 2, "puan");
+}
+
+export function calculateExamScore(values: CalculatorValues): CalculatorResult {
+  const correct = requiredNumber(values, "correct", "Doğru sayısı");
+  const wrong = requiredNumber(values, "wrong", "Yanlış sayısı");
+  const total = requiredNumber(values, "total", "Toplam soru sayısı");
+  if (![correct, wrong, total].every(Number.isSafeInteger) || correct < 0 || wrong < 0 || total <= 0 || correct + wrong > total) {
+    throw new Error("Soru sayıları tam sayı olmalı ve doğru ile yanlış toplamı toplam soru sayısını aşmamalıdır.");
+  }
+  const net = Math.max(0, correct - wrong / 4);
+  return result("Sınav puanı", net / total * 100, "puan", [`Net sayısı (4 yanlış 1 doğruyu götürür): ${formatTurkishNumber(net)}`]);
+}
+
+export function calculateSuccessPercentage(values: CalculatorValues): CalculatorResult {
+  const achieved = requiredNumber(values, "achieved", "Doğru veya tamamlanan sayısı");
+  const total = requiredNumber(values, "total", "Toplam sayı");
+  if (achieved < 0 || total <= 0 || achieved > total) throw new Error("Toplam sıfırdan büyük olmalı; gerçekleşen değer sıfırdan küçük olmamalı ve toplamı aşmamalıdır.");
+  return result("Başarı oranı", achieved / total * 100, "%");
+}
+
+export function calculateLetterGrade(values: CalculatorValues): CalculatorResult {
+  const grade = requiredNumber(values, "grade", "Not");
+  if (grade < 0 || grade > 100) throw new Error("Not 0 ile 100 arasında olmalıdır.");
+  const letter = grade >= 90 ? "AA" : grade >= 85 ? "BA" : grade >= 80 ? "BB" : grade >= 75 ? "CB" : grade >= 70 ? "CC" : grade >= 60 ? "DC" : grade >= 50 ? "DD" : "FF";
+  return {
+    label: "Harf notu",
+    value: grade,
+    displayValue: letter,
+    details: [`${formatTurkishNumber(grade)} puan`, "Yaygın 100'lük not sistemi eşikleri kullanılmıştır; kurumunuzun yönetmeliğini kontrol edin."]
+  };
+}
+
+export function calculateCourseAverage(values: CalculatorValues): CalculatorResult {
+  const grades = [1, 2, 3].map((number) => requiredNumber(values, `grade${number}`, `${number}. ders notu`));
+  if (grades.some((grade) => grade < 0 || grade > 100)) throw new Error("Ders notları 0 ile 100 arasında olmalıdır.");
+  return result("Ders ortalaması", grades.reduce((sum, grade) => sum + grade, 0) / grades.length, "puan");
+}
+
+export function calculateSquareMeters(values: CalculatorValues): CalculatorResult {
+  const width = requiredNumber(values, "width", "En");
+  const length = requiredNumber(values, "length", "Boy");
+  if (width < 0 || length < 0) throw new Error("Ölçüler negatif olamaz.");
+  return result("Alan", width * length, "m²");
+}
+
+export function calculateBmi(values: CalculatorValues): CalculatorResult {
+  const height = requiredNumber(values, "height", "Boy");
+  const weight = requiredNumber(values, "weight", "Kilo");
+  if (height <= 0 || weight <= 0) throw new Error("Boy ve kilo sıfırdan büyük olmalıdır.");
+  const meters = height > 3 ? height / 100 : height;
+  const bmi = weight / (meters * meters);
+  const category = bmi < 18.5 ? "Düşük" : bmi < 25 ? "Normal aralık" : bmi < 30 ? "Yüksek" : "Çok yüksek";
+  return result("Vücut kitle indeksi", bmi, "", [`Sonuç aralığı: ${category}. Bu değer tek başına tıbbi değerlendirme yerine geçmez.`]);
+}
+
+export function calculateVolumeConversion(values: CalculatorValues): CalculatorResult {
+  const amount = requiredNumber(values, "amount", "Miktar");
+  const conversion = values["conversion"];
+  if (amount < 0) throw new Error("Miktar negatif olamaz.");
+  if (conversion === "ml-to-l") return result("Litre", amount / 1000, "L");
+  if (conversion === "l-to-ml") return result("Mililitre", amount * 1000, "ml");
+  if (conversion === "l-to-m3") return result("Metreküp", amount / 1000, "m³");
+  throw new Error("Geçerli bir dönüşüm seçin.");
+}
+
+export function calculateWeightConversion(values: CalculatorValues): CalculatorResult {
+  const amount = requiredNumber(values, "amount", "Miktar");
+  const conversion = values["conversion"];
+  if (amount < 0) throw new Error("Miktar negatif olamaz.");
+  if (conversion === "kg-to-g") return result("Gram", amount * 1000, "g");
+  if (conversion === "g-to-kg") return result("Kilogram", amount / 1000, "kg");
+  if (conversion === "kg-to-ton") return result("Ton", amount / 1000, "t");
+  throw new Error("Geçerli bir dönüşüm seçin.");
+}
+
+export function calculateTimeConversion(values: CalculatorValues): CalculatorResult {
+  const amount = requiredNumber(values, "amount", "Süre");
+  const conversion = values["conversion"];
+  if (amount < 0) throw new Error("Süre negatif olamaz.");
+  if (conversion === "hours-to-minutes") return result("Dakika", amount * 60, "dk");
+  if (conversion === "minutes-to-hours") return result("Saat", amount / 60, "saat");
+  if (conversion === "minutes-to-seconds") return result("Saniye", amount * 60, "sn");
+  throw new Error("Geçerli bir dönüşüm seçin.");
+}
+
+type Calculator = (values: CalculatorValues, now: Date) => CalculatorResult;
+
+const calculators: Record<string, Calculator> = {
+  "yuzde-hesaplama": calculatePercentage,
+  "maas-zam-hesaplama": calculateSalaryRaise,
+  "indirim-hesaplama": calculateDiscount,
+  "kdv-hesaplama": calculateVat,
+  "kar-zarar-hesaplama": calculateProfitLoss,
+  "maas-artis-hesaplama": calculateSalaryIncrease,
+  "yas-hesaplama": calculateAge,
+  "iki-tarih-arasi-gun-hesaplama": calculateDateDifference,
+  "tarihe-gun-ekleme": calculateAddDays,
+  "tarihten-gun-cikarma": calculateSubtractDays,
+  "dogum-gunune-kalan-sure": calculateDaysUntilBirthday,
+  "not-ortalamasi-hesaplama": calculateGradeAverage,
+  "sinav-puani-hesaplama": calculateExamScore,
+  "basari-yuzdesi-hesaplama": calculateSuccessPercentage,
+  "harf-notu-hesaplama": calculateLetterGrade,
+  "ders-ortalamasi-hesaplama": calculateCourseAverage,
+  "metrekare-hesaplama": calculateSquareMeters,
+  "boy-kilo-orani-hesaplama": calculateBmi,
+  "litre-donusumu": calculateVolumeConversion,
+  "kilogram-donusumu": calculateWeightConversion,
+  "saat-dakika-donusturme": calculateTimeConversion
+};
+
+export function calculate(toolId: string, values: CalculatorValues, now = new Date()): CalculatorResult {
+  const calculator = calculators[toolId];
+  if (!calculator) throw new Error("Bu hesaplama aracı bulunamadı.");
+  return calculator(values, now);
+}
+
+function isLeapYear(year: number): boolean {
+  return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+}
