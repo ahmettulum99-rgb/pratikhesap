@@ -15,6 +15,9 @@ export const metadata: Metadata = {
   },
   description: "Finans, tarih, eğitim ve günlük yaşam için ücretsiz, kolay ve hızlı hesaplama araçları.",
   applicationName: "PratikHesap",
+  verification: {
+    google: "IrtJCR_0HoQKTJDawAT19KNVGhkNvTABV-nO6cyC6jw"
+  },
   alternates: { canonical: "/" },
   openGraph: {
     type: "website",
