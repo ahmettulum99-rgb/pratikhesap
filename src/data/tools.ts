@@ -1,3 +1,5 @@
+import { tcmbCurrencies } from "../lib/exchange-rates";
+
 export type CategoryId = "finans" | "tarih" | "egitim" | "gunluk-yasam";
 export type FieldDefinition = {
   name: string;
@@ -19,7 +21,9 @@ export type ToolDefinition = {
   example: string;
   fields: FieldDefinition[];
   popular?: boolean;
+  isNew?: boolean;
 };
+export type ToolSummary = Pick<ToolDefinition, "id" | "name" | "category" | "description">;
 
 export const categories: { id: CategoryId; name: string; href: string; description: string }[] = [
   { id: "finans", name: "Finans", href: "/finans", description: "Bütçe, maaş, vergi ve alışveriş hesaplamaları." },
@@ -88,13 +92,20 @@ export const tools: ToolDefinition[] = [
   },
   {
     id: "kdv-hesaplama", name: "KDV hesaplama", category: "finans",
-    description: "KDV hariç tutara vergi ekleyerek KDV dahil fiyatı bulun.",
-    title: "KDV Hesaplama – KDV Dahil Fiyatı Bulun | PratikHesap",
-    metaDescription: "KDV hariç tutar ve oranı girerek KDV tutarını ve KDV dahil toplam fiyatı hesaplayın.",
-    intro: "KDV hariç tutar ile uygulamak istediğiniz KDV oranını girin. Araç, vergi tutarını ve vergi eklenmiş toplam bedeli gösterir. Uygulanacak oranı işlem türünüze göre kontrol edin.",
-    formula: "KDV tutarı = KDV hariç tutar × KDV oranı ÷ 100; toplam = tutar + KDV",
-    example: "1.000 TL tutara örnek olarak %20 KDV uygulanırsa KDV 200 TL, toplam 1.200 TL olur.",
-    fields: [numberField("amount", "KDV hariç tutar", "Örn. 1000", "₺"), numberField("rate", "KDV oranı", "Örn. 20", "%")]
+    description: "KDV oranı girerek dahil fiyatı veya dahil fiyattan KDV tutarını bulun.",
+    title: "KDV Hesaplama – KDV Dahil ve Hariç Fiyat | PratikHesap",
+    metaDescription: "KDV hariç fiyata vergi ekleyin veya KDV dahil fiyattan vergi tutarını ayırın. Oranı kendiniz girerek iki yönde KDV hesaplayın.",
+    intro: "KDV oranını ve tutarı girip hesaplama yönünü seçin. KDV hariç tutara vergi ekleyebilir veya KDV dahil fiyattan KDV tutarıyla vergi hariç bedeli ayırabilirsiniz. Uygulanacak oranı işlem türünüze göre resmî kaynaklardan kontrol edin.",
+    formula: "Hariç fiyattan dahil fiyat = Hariç tutar × (1 + KDV oranı ÷ 100). Dahil fiyattan hariç fiyat = Dahil tutar ÷ (1 + KDV oranı ÷ 100); KDV = Dahil tutar − Hariç tutar.",
+    example: "1.000 TL KDV hariç tutara %20 eklenirse toplam 1.200 TL olur. 1.200 TL KDV dahil fiyattan %20 KDV ayrılırsa vergi hariç tutar 1.000 TL, KDV 200 TL'dir.",
+    fields: [
+      selectField("direction", "Hesaplama yönü", [
+        { label: "KDV hariç tutardan dahil fiyatı hesapla", value: "excluded-to-included" },
+        { label: "KDV dahil fiyattan KDV'yi ayır", value: "included-to-excluded" }
+      ]),
+      numberField("amount", "Tutar", "Örn. 1000", "₺"),
+      numberField("rate", "KDV oranı", "Örn. 20", "%")
+    ]
   },
   {
     id: "kar-zarar-hesaplama", name: "Kâr zarar hesaplama", category: "finans",
@@ -165,6 +176,16 @@ export const tools: ToolDefinition[] = [
     formula: "Kalan gün = Bir sonraki doğum günü − Bugünün tarihi",
     example: "Bir sonraki doğum gününüz 20 gün sonraysa araç 20 gün sonucunu verir.",
     fields: [dateField("birthDate", "Doğum tarihi")]
+  },
+  {
+    id: "gebelik-haftasi-hesaplama", name: "Gebelik haftası hesaplama", category: "gunluk-yasam", isNew: true,
+    description: "Son adet tarihine göre yaklaşık gebelik haftasını ve tahmini doğum tarihini bulun.",
+    title: "Gebelik Haftası Hesaplama – Son Adet Tarihine Göre | PratikHesap",
+    metaDescription: "Son adet tarihinizi girerek yaklaşık gebelik haftanızı ve 280 günlük hesaba dayalı tahmini doğum tarihinizi öğrenin.",
+    intro: "Son adetinizin ilk gününden bugüne geçen süreyi hafta ve gün olarak gösterir; 280 günlük takvim hesabıyla tahmini doğum tarihini verir. Bu basit tarih hesabı klinik değerlendirme değildir.",
+    formula: "Yaklaşık gebelik yaşı = Son adet tarihinden bugüne geçen gün ÷ 7; tahmini doğum tarihi = Son adet tarihine 280 gün ekle.",
+    example: "Son adet tarihinden 63 gün geçtiyse bu hesaplama yaklaşık 9 hafta olarak gösterir. Tahmini doğum tarihi 280 gün sonrasına göre hesaplanır.",
+    fields: [dateField("lastPeriod", "Son adet tarihinin ilk günü")]
   },
   {
     id: "not-ortalamasi-hesaplama", name: "Not ortalaması hesaplama", category: "egitim", popular: true,
@@ -276,7 +297,7 @@ export const tools: ToolDefinition[] = [
     ]
   },
   {
-    id: "dortluk-not-sistemi-hesaplama", name: "4'lük not sistemi hesaplama", category: "egitim", popular: true,
+    id: "dortluk-not-sistemi-hesaplama", name: "4'lük not sistemi hesaplama", category: "egitim", popular: true, isNew: true,
     description: "Harf notu ve ders kredilerini kullanarak 4 üzerinden ağırlıklı ortalamanızı bulun.",
     title: "4'lük Not Sistemi Hesaplama – Üniversite GPA ve AGNO | PratikHesap",
     metaDescription: "Üniversite harf notlarınızı ve AKTS ya da yerel kredi değerlerinizi girin; 4'lük sistemde ağırlıklı not ortalamanızı (GPA/AGNO) hesaplayın.",
@@ -286,7 +307,7 @@ export const tools: ToolDefinition[] = [
     fields: gpaFields
   },
   {
-    id: "agirlikli-not-ortalamasi-hesaplama", name: "Ağırlıklı not ortalaması", category: "egitim", popular: true,
+    id: "agirlikli-not-ortalamasi-hesaplama", name: "Ağırlıklı not ortalaması", category: "egitim", popular: true, isNew: true,
     description: "Sınav notlarınızı vize, final ve ödev yüzdelerine göre birleştirin.",
     title: "Ağırlıklı Not Ortalaması Hesaplama – Vize Final Notu | PratikHesap",
     metaDescription: "Vize, final ve ödev notlarını kendi yüzdeleriyle birleştirin. Ağırlık toplamı %100 olacak şekilde dönem notunuzu hesaplayın.",
@@ -303,7 +324,7 @@ export const tools: ToolDefinition[] = [
     ]
   },
   {
-    id: "finalde-gerekli-not-hesaplama", name: "Finalde gerekli not hesaplama", category: "egitim",
+    id: "finalde-gerekli-not-hesaplama", name: "Finalde gerekli not hesaplama", category: "egitim", isNew: true,
     description: "Hedef dönem ortalaması için finalden almanız gereken notu öğrenin.",
     title: "Finalde Kaç Almalıyım? Gerekli Final Notu Hesaplama | PratikHesap",
     metaDescription: "Ara sınav notunuzu, final yüzdesini ve hedef ortalamayı girin; hedefe ulaşmak için finalde gereken notu hesaplayın.",
@@ -317,7 +338,7 @@ export const tools: ToolDefinition[] = [
     ]
   },
   {
-    id: "kredi-taksit-hesaplama", name: "Kredi taksit hesaplama", category: "finans",
+    id: "kredi-taksit-hesaplama", name: "Kredi taksit hesaplama", category: "finans", isNew: true,
     description: "Kredi tutarı, aylık faiz ve vadeye göre yaklaşık eşit taksiti bulun.",
     title: "Kredi Taksit Hesaplama – Aylık Taksit ve Geri Ödeme | PratikHesap",
     metaDescription: "Kredi tutarı, aylık faiz oranı ve vade ayını girin; yaklaşık eşit taksiti, toplam geri ödemeyi ve faiz tutarını görün.",
@@ -331,7 +352,7 @@ export const tools: ToolDefinition[] = [
     ]
   },
   {
-    id: "bilesik-faiz-hesaplama", name: "Bileşik faiz hesaplama", category: "finans",
+    id: "bilesik-faiz-hesaplama", name: "Bileşik faiz hesaplama", category: "finans", isNew: true,
     description: "Başlangıç tutarını faiz sıklığı ve süreyle bileşik olarak hesaplayın.",
     title: "Bileşik Faiz Hesaplama – Faiz Getirisi ve Dönem Sonu Tutarı | PratikHesap",
     metaDescription: "Başlangıç tutarı, yıllık oran ve süreyle bileşik faiz hesabı yapın; yıllık, aylık veya günlük bileşikleşme sıklığını seçin.",
@@ -351,7 +372,34 @@ export const tools: ToolDefinition[] = [
     ]
   },
   {
-    id: "yakit-tuketimi-hesaplama", name: "Yakıt tüketimi hesaplama", category: "gunluk-yasam",
+    id: "basit-faiz-hesaplama", name: "Basit faiz hesaplama", category: "finans", isNew: true,
+    description: "Anapara, yıllık faiz oranı ve gün sayısıyla basit faiz getirisini hesaplayın.",
+    title: "Basit Faiz Hesaplama – Faiz Getirisi ve Anapara | PratikHesap",
+    metaDescription: "Anapara, yıllık faiz oranı ve gün sayısını girerek 365 günlük yıl varsayımıyla basit faiz getirisini ve dönem sonu tutarını hesaplayın.",
+    intro: "Anapara, yıllık faiz oranı ve gün sayısını kullanarak bileşikleşme olmadan yaklaşık faiz tutarını hesaplayın. Hesaplamada 365 günlük yıl varsayılır; vergi, masraf ve sözleşme koşulları dahil değildir.",
+    formula: "Basit faiz = Anapara × Yıllık faiz oranı ÷ 100 × Gün sayısı ÷ 365; dönem sonu tutarı = anapara + faiz.",
+    example: "10.000 TL anapara, yıllık %10 ve 180 gün için basit faiz yaklaşık 493,15 TL; toplam yaklaşık 10.493,15 TL olur.",
+    fields: [
+      numberField("principal", "Anapara", "Örn. 10000", "₺"),
+      numberField("annualRate", "Yıllık faiz oranı", "Örn. 10", "%"),
+      numberField("days", "Süre", "Örn. 180", "gün")
+    ]
+  },
+  {
+    id: "doviz-hesaplama", name: "Döviz hesaplama", category: "finans", isNew: true,
+    description: "TCMB gösterge satış kuruyla döviz tutarının yaklaşık TL karşılığını bulun.",
+    title: "Döviz Hesaplama – Güncel TCMB Kuruyla TL Çevirici | PratikHesap",
+    metaDescription: "Döviz miktarını seçin; TCMB'nin yayımladığı satış kuruna göre yaklaşık Türk lirası karşılığını, kur tarihini ve birimini görün.",
+    intro: "Döviz tutarını TCMB'nin XML bülteninde yayımlanan ForexSelling (gösterge satış) kuru üzerinden yaklaşık Türk lirasına çevirin. TCMB kuru hafta sonu ve resmî tatillerde yenilenmeyebilir; banka ve işlem kuruluşlarının uyguladığı kur farklı olabilir.",
+    formula: "Yaklaşık TL karşılığı = Döviz tutarı × TCMB ForexSelling kuru ÷ kur bültenindeki birim.",
+    example: "TCMB bülteninde 1 USD satış kuru 35,00 TL ise 100 USD için yaklaşık karşılık 100 × 35,00 = 3.500 TL olur. Gösterilen oran örnektir; araç bülten verisini kullanır.",
+    fields: [
+      numberField("amount", "Döviz tutarı", "Örn. 100"),
+      selectField("currency", "Döviz türü", tcmbCurrencies.map(({ code, name }) => ({ label: name, value: code })))
+    ]
+  },
+  {
+    id: "yakit-tuketimi-hesaplama", name: "Yakıt tüketimi hesaplama", category: "gunluk-yasam", isNew: true,
     description: "Mesafe ve yakıt miktarından 100 km tüketimini ve yakıt maliyetini bulun.",
     title: "Yakıt Tüketimi Hesaplama – Araç 100 km'de Kaç Litre Yakar? | PratikHesap",
     metaDescription: "Gidilen mesafe, harcanan benzin veya motorin ve litre fiyatıyla aracın L/100 km tüketimini ve yakıt maliyetini hesaplayın.",
@@ -365,7 +413,7 @@ export const tools: ToolDefinition[] = [
     ]
   },
   {
-    id: "elektrik-faturasi-hesaplama", name: "Elektrik tüketim maliyeti", category: "gunluk-yasam",
+    id: "elektrik-faturasi-hesaplama", name: "Elektrik tüketim maliyeti", category: "gunluk-yasam", isNew: true,
     description: "kWh tüketimi ve birim fiyatla yaklaşık enerji bedelini hesaplayın.",
     title: "Elektrik Faturası Hesaplama – kWh Tüketim Maliyeti | PratikHesap",
     metaDescription: "Elektrik tüketiminizi kWh, enerji birim fiyatını TL/kWh olarak girin; yaklaşık enerji bedelinizi hesaplayın.",
@@ -378,7 +426,7 @@ export const tools: ToolDefinition[] = [
     ]
   },
   {
-    id: "is-gunu-hesaplama", name: "İş günü hesaplama", category: "tarih",
+    id: "is-gunu-hesaplama", name: "İş günü hesaplama", category: "tarih", isNew: true,
     description: "İki tarih arasındaki hafta içi günleri sayın; resmî tatiller hariçtir.",
     title: "İş Günü Hesaplama – İki Tarih Arası Hafta İçi Gün Sayısı | PratikHesap",
     metaDescription: "Başlangıç ve bitiş tarihini seçerek aradaki hafta içi iş günü sayısını bulun; hesaplama resmî tatilleri kapsamaz.",

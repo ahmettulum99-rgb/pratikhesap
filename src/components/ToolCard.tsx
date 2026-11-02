@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowUpRight, Calculator, CalendarDays, GraduationCap, Wallet } from "lucide-react";
-import type { ToolDefinition } from "@/data/tools";
+import type { ToolSummary } from "@/data/tools";
 
 const icons = {
   finans: Wallet,
@@ -9,7 +9,7 @@ const icons = {
   "gunluk-yasam": Calculator
 };
 
-export function ToolCard({ tool }: { tool: ToolDefinition }) {
+export function ToolCard({ tool }: { tool: ToolSummary }) {
   const Icon = icons[tool.category];
   return (
     <Link href={`/${tool.id}`} className="tool-card group">

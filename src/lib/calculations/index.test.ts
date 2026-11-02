@@ -1,5 +1,43 @@
 import { describe, expect, it } from "vitest";
 import { calculate, formatTurkishNumber, parseDate, parseTurkishNumber } from "./index";
+import { tools } from "../../data/tools";
+
+const calculatorSamples = {
+  "yuzde-hesaplama": { amount: "20", percent: "15" },
+  "maas-zam-hesaplama": { salary: "1000", percent: "10" },
+  "indirim-hesaplama": { amount: "100", percent: "10" },
+  "kdv-hesaplama": { amount: "100", rate: "20" },
+  "kar-zarar-hesaplama": { cost: "80", sale: "100" },
+  "maas-artis-hesaplama": { salary: "1000", increase: "100" },
+  "yas-hesaplama": { birthDate: "2000-01-01" },
+  "iki-tarih-arasi-gun-hesaplama": { startDate: "2025-01-01", endDate: "2025-01-02" },
+  "tarihe-gun-ekleme": { date: "2025-01-01", days: "1" },
+  "tarihten-gun-cikarma": { date: "2025-01-02", days: "1" },
+  "dogum-gunune-kalan-sure": { birthDate: "2000-01-01" },
+  "gebelik-haftasi-hesaplama": { lastPeriod: "2024-01-01" },
+  "not-ortalamasi-hesaplama": { grade1: "70", grade2: "80" },
+  "sinav-puani-hesaplama": { correct: "7", wrong: "1", total: "10" },
+  "basari-yuzdesi-hesaplama": { achieved: "5", total: "10" },
+  "harf-notu-hesaplama": { grade: "70" },
+  "ders-ortalamasi-hesaplama": { grade1: "70", grade2: "80", grade3: "90" },
+  "metrekare-hesaplama": { width: "2", length: "3" },
+  "boy-kilo-orani-hesaplama": { height: "170", weight: "65" },
+  "litre-donusumu": { amount: "1", conversion: "ml-to-l" },
+  "kilogram-donusumu": { amount: "1", conversion: "kg-to-g" },
+  "saat-dakika-donusturme": { amount: "1", conversion: "hours-to-minutes" },
+  "dortluk-not-sistemi-hesaplama": { grade1: "AA", credit1: "1" },
+  "agirlikli-not-ortalamasi-hesaplama": {
+    score1: "70", weight1: "40", score2: "80", weight2: "50", score3: "90", weight3: "10"
+  },
+  "finalde-gerekli-not-hesaplama": { currentGrade: "60", targetGrade: "70", finalWeight: "60" },
+  "kredi-taksit-hesaplama": { principal: "1000", monthlyRate: "0", months: "10" },
+  "bilesik-faiz-hesaplama": { principal: "1000", annualRate: "0", years: "1", periods: "12" },
+  "basit-faiz-hesaplama": { principal: "1000", annualRate: "10", days: "30" },
+  "doviz-hesaplama": { amount: "100", currency: "JPY", exchangeRate: "20", exchangeUnit: "100" },
+  "yakit-tuketimi-hesaplama": { distance: "100", fuel: "7", price: "40" },
+  "elektrik-faturasi-hesaplama": { usage: "100", unitPrice: "2" },
+  "is-gunu-hesaplama": { startDate: "2025-01-06", endDate: "2025-01-07" }
+};
 
 describe("Turkish number helpers", () => {
   it("parses comma decimals and grouped thousands", () => {
@@ -26,6 +64,9 @@ describe("financial calculators", () => {
   it("calculates salary, VAT, and loss", () => {
     expect(calculate("maas-zam-hesaplama", { salary: "30000", percent: "20" }).value).toBe(36000);
     expect(calculate("kdv-hesaplama", { amount: "1000", rate: "20" }).value).toBe(1200);
+    expect(calculate("kdv-hesaplama", { amount: "1200", rate: "20", direction: "included-to-excluded" }).value).toBe(1000);
+    expect(calculate("kdv-hesaplama", { amount: "1200", rate: "0", direction: "included-to-excluded" }).value).toBe(1200);
+    expect(() => calculate("kdv-hesaplama", { amount: "100", rate: "20", direction: "unexpected" })).toThrow(/yönü/);
     expect(calculate("kar-zarar-hesaplama", { cost: "100", sale: "80" }).value).toBe(20);
     expect(calculate("kar-zarar-hesaplama", { cost: "0", sale: "80" }).details?.[0]).toMatch(/hesaplanamaz/);
     expect(calculate("maas-artis-hesaplama", { salary: "0", increase: "500" }).details?.[0]).toMatch(/hesaplanamaz/);
@@ -45,6 +86,7 @@ describe("date calculators", () => {
   it("validates calendar dates and handles leap days", () => {
     expect(() => parseDate("2023-02-29")).toThrow(/geçerli/);
     expect(parseDate("2024-02-29").getUTCDate()).toBe(29);
+    expect(parseDate("0099-01-01").getUTCFullYear()).toBe(99);
     expect(calculate("tarihe-gun-ekleme", { date: "2024-02-28", days: "1" }).displayValue).toBe("29.02.2024");
     expect(calculate("tarihten-gun-cikarma", { date: "2024-03-01", days: "1" }).displayValue).toBe("29.02.2024");
   });
@@ -56,6 +98,7 @@ describe("date calculators", () => {
     expect(calculate("iki-tarih-arasi-gun-hesaplama", { startDate: "2024-02-28", endDate: "2024-03-01" }).value).toBe(2);
     expect(() => calculate("yas-hesaplama", { birthDate: "2030-01-01" }, new Date("2025-01-01"))).toThrow(/gelecekte/);
     expect(() => calculate("dogum-gunune-kalan-sure", { birthDate: "2030-01-01" }, new Date("2025-01-01"))).toThrow(/gelecekte/);
+    expect(calculate("dogum-gunune-kalan-sure", { birthDate: "2000-01-01" }, new Date("2025-01-01")).value).toBe(0);
   });
 
   it("rejects non-integer date offsets", () => {
@@ -98,6 +141,7 @@ describe("education and daily-life calculators", () => {
     expect(() => calculate("dortluk-not-sistemi-hesaplama", {})).toThrow(/En az bir ders/);
     expect(() => calculate("dortluk-not-sistemi-hesaplama", { grade1: "AA", credit1: "" })).toThrow(/birlikte/);
     expect(() => calculate("dortluk-not-sistemi-hesaplama", { grade1: "AA", credit1: "0" })).toThrow(/kredi/);
+    expect(() => calculate("dortluk-not-sistemi-hesaplama", { grade1: "__proto__", credit1: "1" })).toThrow(/harf notu/);
   });
 
   it("calculates weighted grades and the final exam grade needed", () => {
@@ -133,5 +177,34 @@ describe("education and daily-life calculators", () => {
     expect(calculate("is-gunu-hesaplama", { startDate: "2024-01-08", endDate: "2024-01-15" }).value).toBe(5);
     expect(calculate("is-gunu-hesaplama", { startDate: "2024-01-15", endDate: "2024-01-08" }).value).toBe(5);
     expect(calculate("is-gunu-hesaplama", { startDate: "2024-01-06", endDate: "2024-01-07" }).value).toBe(0);
+  });
+
+  it("calculates simple interest, exchange conversion, and pregnancy week estimates", () => {
+    expect(calculate("basit-faiz-hesaplama", { principal: "10000", annualRate: "10", days: "180" }).value).toBeCloseTo(493.15068, 4);
+    expect(calculate("basit-faiz-hesaplama", { principal: "10000", annualRate: "10", days: "0" }).value).toBe(0);
+    expect(() => calculate("basit-faiz-hesaplama", { principal: "10000", annualRate: "10", days: "1,5" })).toThrow();
+    expect(calculate("doviz-hesaplama", {
+      amount: "100", currency: "JPY", exchangeRate: "22,5", exchangeUnit: "100", rateDate: "02.11.2026"
+    }).value).toBe(22.5);
+    expect(calculate("doviz-hesaplama", {
+      amount: "100", currency: "EUR", exchangeRate: "1.2340", exchangeUnit: "1"
+    }).value).toBe(123.4);
+    expect(() => calculate("doviz-hesaplama", {
+      amount: "100", currency: "TRY", exchangeRate: "22,5", exchangeUnit: "1"
+    })).toThrow(/döviz türü/);
+    const pregnancy = calculate("gebelik-haftasi-hesaplama", { lastPeriod: "2024-01-01" }, new Date("2024-03-04T12:00:00Z"));
+    expect(pregnancy.value).toBe(9);
+    expect(pregnancy.details?.[1]).toContain("07.10.2024");
+    expect(pregnancy.details?.[2]).toContain("sağlık uzmanının değerlendirmesi");
+    expect(() => calculate("gebelik-haftasi-hesaplama", { lastPeriod: "2025-01-02" }, new Date("2025-01-01"))).toThrow(/gelecekte/);
+  });
+
+  it("has a working calculation for every catalog entry and rejects inherited object keys", () => {
+    expect(Object.keys(calculatorSamples).sort()).toEqual(tools.map((tool) => tool.id).sort());
+    for (const tool of tools) {
+      const result = calculate(tool.id, calculatorSamples[tool.id as keyof typeof calculatorSamples], new Date("2025-01-01T00:00:00Z"));
+      expect(Number.isFinite(result.value), tool.id).toBe(true);
+    }
+    expect(() => calculate("toString", {})).toThrow(/bulunamadı/);
   });
 });

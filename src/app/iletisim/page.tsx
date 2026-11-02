@@ -1,15 +1,17 @@
-import type { Metadata } from "next";
 import { Breadcrumb } from "@/components/Breadcrumb";
+import { PageStructuredData } from "@/components/PageStructuredData";
+import { createPageMetadata } from "@/lib/seo/metadata";
 
-export const metadata: Metadata = {
+export const metadata = createPageMetadata({
   title: "İletişim | PratikHesap",
   description: "PratikHesap hakkında bilgi, hata bildirimi veya araç önerisi için iletişim sayfasını ziyaret edin.",
-  alternates: { canonical: "/iletisim" }
-};
+  path: "/iletisim"
+});
 
 export default function ContactPage() {
   return (
     <main className="container-page py-10 sm:py-14">
+      <PageStructuredData name="İletişim | PratikHesap" description="PratikHesap iletişim sayfası." path="/iletisim" />
       <Breadcrumb items={[{ label: "İletişim" }]} path="/iletisim" />
       <article className="max-w-3xl">
         <p className="eyebrow">Bize ulaşın</p>

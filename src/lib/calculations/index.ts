@@ -36,7 +36,9 @@ export function formatTurkishNumber(value: number, maximumFractionDigits = 2): s
 export function parseDate(value: string, label = "Tarih"): Date {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new Error(`${label} için geçerli bir tarih seçin.`);
   const [year, month, day] = value.split("-").map(Number);
-  const date = new Date(Date.UTC(year, month - 1, day));
+  const date = new Date(0);
+  date.setUTCHours(0, 0, 0, 0);
+  date.setUTCFullYear(year, month - 1, day);
   if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) {
     throw new Error(`${label} geçerli bir takvim tarihi değil.`);
   }
@@ -80,6 +82,14 @@ export function calculateVat(values: CalculatorValues): CalculatorResult {
   const amount = requiredNumber(values, "amount", "KDV hariç tutar");
   const rate = requiredNumber(values, "rate", "KDV oranı");
   if (amount < 0 || rate < 0) throw new Error("Tutar ve KDV oranı negatif olamaz.");
+  if (values["direction"] === "included-to-excluded") {
+    const netAmount = amount / (1 + rate / 100);
+    const tax = amount - netAmount;
+    return result("KDV hariç tutar", netAmount, "₺", [`KDV tutarı: ${formatTurkishNumber(tax)} ₺`, `KDV dahil tutar: ${formatTurkishNumber(amount)} ₺`]);
+  }
+  if (values["direction"] && values["direction"] !== "excluded-to-included") {
+    throw new Error("Geçerli bir KDV hesaplama yönü seçin.");
+  }
   const tax = amount * rate / 100;
   return result("KDV dahil tutar", amount + tax, "₺", [`KDV tutarı: ${formatTurkishNumber(tax)} ₺`]);
 }
@@ -161,6 +171,24 @@ export function calculateDaysUntilBirthday(values: CalculatorValues, now = new D
     nextBirthday = new Date(Date.UTC(year, month, day));
   }
   return result("Kalan süre", (nextBirthday.getTime() - today.getTime()) / 86_400_000, "gün");
+}
+
+export function calculatePregnancyWeeks(values: CalculatorValues, now = new Date()): CalculatorResult {
+  const lastPeriod = dateValue(values, "lastPeriod", "Son adet tarihi");
+  const today = todayUtc(now);
+  if (lastPeriod > today) throw new Error("Son adet tarihi gelecekte olamaz.");
+  const elapsedDays = (today.getTime() - lastPeriod.getTime()) / 86_400_000;
+  const weeks = Math.floor(elapsedDays / 7);
+  const days = elapsedDays % 7;
+  const estimatedDueDate = new Date(lastPeriod);
+  estimatedDueDate.setUTCDate(estimatedDueDate.getUTCDate() + 280);
+  if (!Number.isFinite(estimatedDueDate.getTime())) throw new Error("Tahmini tarih desteklenen takvim aralığının dışında.");
+  const dueDateLabel = `${estimatedDueDate.getUTCDate().toString().padStart(2, "0")}.${(estimatedDueDate.getUTCMonth() + 1).toString().padStart(2, "0")}.${estimatedDueDate.getUTCFullYear().toString().padStart(4, "0")}`;
+  return result("Tahmini gebelik haftası", weeks + days / 7, "hafta", [
+    `Yaklaşık ${weeks} hafta ${days} gün.`,
+    `Son adet tarihine göre tahmini doğum tarihi: ${dueDateLabel} (280 gün hesabı).`,
+    "Bu sonuç yaklaşık bilgilendirme içindir; gebelik haftası ve doğum tarihi için sağlık uzmanının değerlendirmesi esas alınmalıdır."
+  ]);
 }
 
 export function calculateGradeAverage(values: CalculatorValues): CalculatorResult {
@@ -268,7 +296,7 @@ export function calculateFourPointGpa(values: CalculatorValues): CalculatorResul
     if (!grade || !rawCredit) throw new Error(`${course}. ders için harf notu ve kredi bilgisini birlikte girin.`);
     const credit = parseTurkishNumber(rawCredit);
     if (!Number.isFinite(credit) || credit <= 0) throw new Error(`${course}. ders kredisi sıfırdan büyük geçerli bir sayı olmalıdır.`);
-    if (!(grade in gradePoints)) throw new Error(`${course}. ders için geçerli bir harf notu seçin.`);
+    if (!Object.prototype.hasOwnProperty.call(gradePoints, grade)) throw new Error(`${course}. ders için geçerli bir harf notu seçin.`);
     weightedPoints += gradePoints[grade] * credit;
     totalCredits += credit;
     courseCount++;
@@ -357,6 +385,37 @@ export function calculateCompoundInterest(values: CalculatorValues): CalculatorR
   ]);
 }
 
+export function calculateSimpleInterest(values: CalculatorValues): CalculatorResult {
+  const principal = requiredNumber(values, "principal", "Anapara");
+  const annualRate = requiredNumber(values, "annualRate", "Yıllık faiz oranı");
+  const days = requiredNumber(values, "days", "Süre");
+  if (principal < 0 || annualRate < 0 || !Number.isSafeInteger(days) || days < 0) {
+    throw new Error("Anapara ve faiz oranı negatif olamaz; süre sıfır veya daha büyük tam sayı olmalıdır.");
+  }
+  const interest = principal * annualRate / 100 * days / 365;
+  return result("Tahmini basit faiz getirisi", interest, "₺", [
+    `Tahmini dönem sonu tutarı: ${formatTurkishNumber(principal + interest)} ₺`,
+    "365 günlük yıl varsayımı kullanılır; vergi, masraf ve kurum koşulları dahil değildir."
+  ]);
+}
+
+export function calculateCurrencyConversion(values: CalculatorValues): CalculatorResult {
+  const amount = requiredNumber(values, "amount", "Döviz tutarı");
+  const rate = requiredNumber(values, "exchangeRate", "TCMB satış kuru");
+  const unit = requiredNumber(values, "exchangeUnit", "Kur birimi");
+  const currency = values["currency"]?.trim() ?? "";
+  const allowedCurrencies = ["USD", "EUR", "GBP", "CHF", "JPY"];
+  if (!allowedCurrencies.includes(currency)) throw new Error("Desteklenen bir döviz türü seçin.");
+  if (amount < 0 || rate <= 0 || !Number.isSafeInteger(unit) || unit <= 0) {
+    throw new Error("Döviz tutarı negatif olamaz; kur ve kur birimi geçerli olmalıdır.");
+  }
+  const converted = amount * rate / unit;
+  return result("Yaklaşık Türk lirası karşılığı", converted, "₺", [
+    `TCMB ${values["rateDate"] || "güncel"} tarihli ${currency} ForexSelling kuru: ${formatTurkishNumber(rate)} ₺ / ${unit} ${currency}.`,
+    "Bu gösterge niteliğindeki TCMB satış kurudur; banka, ödeme kuruluşu veya döviz bürosu kuru ve işlem masrafları farklı olabilir."
+  ]);
+}
+
 export function calculateFuelConsumption(values: CalculatorValues): CalculatorResult {
   const distance = requiredNumber(values, "distance", "Mesafe");
   const fuel = requiredNumber(values, "fuel", "Harcanan yakıt");
@@ -411,6 +470,7 @@ const calculators: Record<string, Calculator> = {
   "tarihe-gun-ekleme": calculateAddDays,
   "tarihten-gun-cikarma": calculateSubtractDays,
   "dogum-gunune-kalan-sure": calculateDaysUntilBirthday,
+  "gebelik-haftasi-hesaplama": calculatePregnancyWeeks,
   "not-ortalamasi-hesaplama": calculateGradeAverage,
   "sinav-puani-hesaplama": calculateExamScore,
   "basari-yuzdesi-hesaplama": calculateSuccessPercentage,
@@ -426,14 +486,16 @@ const calculators: Record<string, Calculator> = {
   "finalde-gerekli-not-hesaplama": calculateRequiredFinalGrade,
   "kredi-taksit-hesaplama": calculateLoanInstallment,
   "bilesik-faiz-hesaplama": calculateCompoundInterest,
+  "basit-faiz-hesaplama": calculateSimpleInterest,
+  "doviz-hesaplama": calculateCurrencyConversion,
   "yakit-tuketimi-hesaplama": calculateFuelConsumption,
   "elektrik-faturasi-hesaplama": calculateElectricityCost,
   "is-gunu-hesaplama": calculateBusinessDays
 };
 
 export function calculate(toolId: string, values: CalculatorValues, now = new Date()): CalculatorResult {
+  if (!Object.prototype.hasOwnProperty.call(calculators, toolId)) throw new Error("Bu hesaplama aracı bulunamadı.");
   const calculator = calculators[toolId];
-  if (!calculator) throw new Error("Bu hesaplama aracı bulunamadı.");
   return calculator(values, now);
 }
 

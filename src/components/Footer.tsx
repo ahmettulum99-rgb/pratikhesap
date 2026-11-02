@@ -21,6 +21,8 @@ export function Footer() {
             <li><Link className="hover:text-blue" href="/hakkimizda">Hakkımızda</Link></li>
             <li><Link className="hover:text-blue" href="/iletisim">İletişim</Link></li>
             <li><Link className="hover:text-blue" href="/gizlilik-politikasi">Gizlilik Politikası</Link></li>
+            <li><Link className="hover:text-blue" href="/kullanim-kosullari">Kullanım Koşulları</Link></li>
+            <li><Link className="hover:text-blue" href="/cerez-politikasi">Çerez Politikası</Link></li>
           </ul>
         </div>
       </div>

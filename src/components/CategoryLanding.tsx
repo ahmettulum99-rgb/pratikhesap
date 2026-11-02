@@ -1,13 +1,17 @@
 import type { CategoryId } from "@/data/tools";
 import { categories, tools } from "@/data/tools";
 import { Breadcrumb } from "./Breadcrumb";
+import { PageStructuredData } from "./PageStructuredData";
 import { ToolExplorer } from "./ToolExplorer";
 
 export function CategoryLanding({ categoryId }: { categoryId: CategoryId }) {
   const category = categories.find((item) => item.id === categoryId)!;
-  const categoryTools = tools.filter((tool) => tool.category === categoryId);
+  const categoryTools = tools
+    .filter((tool) => tool.category === categoryId)
+    .map(({ id, name, category, description }) => ({ id, name, category, description }));
   return (
     <div className="container-page py-10 sm:py-14">
+      <PageStructuredData name={`${category.name} hesaplama araçları`} description={category.description} path={category.href} />
       <Breadcrumb items={[{ label: category.name }]} path={category.href} />
       <header className="max-w-3xl">
         <p className="eyebrow">{category.name} araçları</p>
@@ -15,7 +19,7 @@ export function CategoryLanding({ categoryId }: { categoryId: CategoryId }) {
         <p className="mt-4 text-lg leading-8 text-slate-600">{category.description} Tüm işlemler tarayıcınızda, ücretsiz olarak hesaplanır.</p>
       </header>
       <section className="mt-9" aria-label={`${category.name} hesaplama araçları`}>
-        <ToolExplorer tools={categoryTools} showSearch={false} initialCategory={categoryId} />
+        <ToolExplorer tools={categoryTools} showSearch={false} showFilters={false} />
       </section>
     </div>
   );

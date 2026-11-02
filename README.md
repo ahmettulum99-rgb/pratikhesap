@@ -4,7 +4,7 @@ Hesaplamak artık çok kolay. PratikHesap; finans, tarih, eğitim ve günlük ya
 
 ## Gereksinimler
 
-- Node.js 18.17 veya üzeri
+- Node.js 20.9 veya üzeri (Next.js 16 gereksinimi)
 - npm
 
 ## Kurulum ve çalıştırma
@@ -24,6 +24,12 @@ Uygulamayı `http://localhost:3000` adresinde açın.
 - `npm run lint`: ESLint
 - `npm test`: Hesaplama fonksiyonları testleri
 
+## Araçlar ve güncel veri
+
+Platformda finans, tarih, eğitim ve günlük yaşam kategorilerinde 32 hesaplama aracı bulunur. Döviz çevirme aracı, TCMB'nin günlük XML bültenindeki gösterge satış kurunu kullanır. Sunucu tarafındaki kur isteği bir saat önbelleğe alınır; bülten erişilemiyorsa uygulama hata gösterir ve eski ya da uydurma kurla hesaplama yapmaz. Sonuçlar bilgilendirme amaçlıdır ve işlem anındaki piyasa kuru olmayabilir.
+
+Kredi, eğitim notu, elektrik maliyeti ve benzeri hesaplamalarda kurum, sağlayıcı veya kullanıcı girdilerine göre değişebilen varsayımlar ilgili araç sayfasında belirtilir. Net/brüt maaş hesaplaması gibi güncel mevzuat ve kişisel bordro bilgileri gerektiren araçlar, doğrulanmış parametreler olmadan sunulmaz.
+
 ## Mimari
 
 - `src/app`: App Router sayfaları, SEO metadata, sitemap ve robots
@@ -42,7 +48,7 @@ Auto ads kullanılıyorsa AdSense panelinde site için otomatik reklamları etki
 
 ## Hesaplama araçları ve içerik
 
-Hesaplama araçları formülleri ve SEO arama ifadeleriyle katalogda tanımlanır. Yeni araç sayfaları metadata, canonical adres, breadcrumb ve sitemap'e katalogdan eklenir. `src/data/seo-keywords.ts` araca özgü, kullanıcı arama amacına uygun terimleri içerir; anahtar kelimeler sayfa içeriğini desteklemek içindir, sıralama garantisi vermez. Üniversite not katsayıları, kredi, elektrik tarifesi ve kredi maliyetleri kurum/sağlayıcıya göre değişebileceğinden araçlar kullandığı varsayımları sonuç sayfasında açıklar.
+Hesaplama araçları formülleri ve SEO arama ifadeleriyle katalogda tanımlanır. Yeni araç sayfaları metadata, canonical adres, breadcrumb ve sitemap'e katalogdan eklenir. `src/data/seo-keywords.ts` araca özgü, kullanıcı arama amacına uygun terimleri içerir; anahtar kelimeler sayfa içeriğini desteklemek içindir, sıralama garantisi vermez. Üniversite not katsayıları, kredi, elektrik tarifesi ve kredi maliyetleri kurum/sağlayıcıya göre değişebileceğinden araçlar kullandığı varsayımları sonuç sayfasında açıklar. Kullanım koşulları ve çerez açıklamaları `/kullanim-kosullari` ve `/cerez-politikasi` sayfalarındadır. Gerçek bir iletişim kanalı ve AdSense onaylı bir izin yönetim platformu yapılandırılmadan bu bilgiler veya izin yönetimi tamamlanmış kabul edilmemelidir.
 
 ## SEO ve alan adı
 

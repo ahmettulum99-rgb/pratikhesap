@@ -3,10 +3,17 @@ import { categories, tools } from "../data/tools";
 import { siteUrl } from "../lib/site";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const staticPaths = ["/", "/hakkimizda", "/iletisim", "/gizlilik-politikasi"];
+  const staticPaths = [
+    "/",
+    "/hakkimizda",
+    "/iletisim",
+    "/gizlilik-politikasi",
+    "/kullanim-kosullari",
+    "/cerez-politikasi"
+  ];
   return [
     ...staticPaths.map((path) => ({
-      url: path === "/" ? siteUrl : `${siteUrl}${path}`,
+      url: `${siteUrl}${path}`,
       changeFrequency: "monthly" as const,
       priority: path === "/" ? 1 : 0.5
     })),

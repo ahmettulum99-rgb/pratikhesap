@@ -42,7 +42,13 @@ export const metadata: Metadata = {
     locale: "tr_TR",
     siteName: "PratikHesap",
     title: "PratikHesap – Hesaplamak artık çok kolay",
-    description: "Günlük ihtiyaçlarınız için ücretsiz hesaplama araçları."
+    description: "Günlük ihtiyaçlarınız için ücretsiz hesaplama araçları.",
+    url: "/"
+  },
+  twitter: {
+    card: "summary",
+    title: "PratikHesap – Hesaplamak artık çok kolay",
+    description: "Finans, tarih, eğitim ve günlük yaşam için ücretsiz, kolay ve hızlı hesaplama araçları."
   },
   robots: { index: true, follow: true }
 };
@@ -51,13 +57,16 @@ const structuredData = [
   {
     "@context": "https://schema.org",
     "@type": "WebSite",
+    "@id": `${siteUrl}/#website`,
     name: "PratikHesap",
     url: siteUrl,
-    description: "Ücretsiz çevrimiçi hesaplama araçları."
+    description: "Ücretsiz çevrimiçi hesaplama araçları.",
+    publisher: { "@id": `${siteUrl}/#organization` }
   },
   {
     "@context": "https://schema.org",
     "@type": "Organization",
+    "@id": `${siteUrl}/#organization`,
     name: "PratikHesap",
     url: siteUrl
   }

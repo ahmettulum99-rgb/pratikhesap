@@ -2,17 +2,19 @@
 
 import { useMemo, useState } from "react";
 import { Search, SlidersHorizontal } from "lucide-react";
-import type { CategoryId, ToolDefinition } from "@/data/tools";
+import type { CategoryId, ToolSummary } from "@/data/tools";
 import { categories } from "@/data/tools";
 import { ToolCard } from "./ToolCard";
 
 export function ToolExplorer({
   tools,
   showSearch = true,
+  showFilters = true,
   initialCategory
 }: {
-  tools: ToolDefinition[];
+  tools: ToolSummary[];
   showSearch?: boolean;
+  showFilters?: boolean;
   initialCategory?: CategoryId;
 }) {
   const [query, setQuery] = useState("");
@@ -38,7 +40,10 @@ export function ToolExplorer({
               type="search"
             />
           </label>
-          <div className="flex flex-wrap items-center gap-2" aria-label="Kategori filtreleri">
+        </div>
+      )}
+      {showFilters && (
+        <div className="mb-6 flex flex-wrap items-center gap-2" role="group" aria-label="Kategori filtreleri">
             <SlidersHorizontal size={17} aria-hidden="true" className="mr-1 text-slate-500" />
             <button type="button" className={`filter-chip ${category === "tumu" ? "filter-chip-active" : ""}`} onClick={() => setCategory("tumu")} aria-pressed={category === "tumu"}>Tüm araçlar</button>
             {categories.map((item) => (
@@ -52,7 +57,6 @@ export function ToolExplorer({
                 {item.name}
               </button>
             ))}
-          </div>
         </div>
       )}
       {filtered.length > 0 ? (

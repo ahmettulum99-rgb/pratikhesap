@@ -20,6 +20,7 @@ const toolKeywords: Record<string, string[]> = {
   "tarihe-gun-ekleme": ["tarihe gün ekleme", "ileri tarih hesaplama", "gün sonrası tarih", "tarih bulma hesaplayıcı"],
   "tarihten-gun-cikarma": ["tarihten gün çıkarma", "geçmiş tarih hesaplama", "gün öncesi tarih", "tarih çıkarma hesaplayıcı"],
   "dogum-gunune-kalan-sure": ["doğum gününe kaç gün kaldı", "doğum günü sayacı", "doğum gününe kalan süre", "doğum günü hesaplama"],
+  "gebelik-haftasi-hesaplama": ["gebelik haftası hesaplama", "kaç haftalık gebeyim", "son adet tarihine göre gebelik haftası", "tahmini doğum tarihi hesaplama"],
   "not-ortalamasi-hesaplama": ["not ortalaması hesaplama", "sınav notu ortalaması", "iki not ortalaması", "puan ortalaması hesaplayıcı"],
   "sinav-puani-hesaplama": ["sınav puanı hesaplama", "net hesaplama", "4 yanlış 1 doğru", "doğru yanlış puan hesaplayıcı"],
   "basari-yuzdesi-hesaplama": ["başarı yüzdesi hesaplama", "doğru yüzdesi hesaplama", "tamamlanma oranı", "başarı oranı hesaplayıcı"],
@@ -35,6 +36,8 @@ const toolKeywords: Record<string, string[]> = {
   "finalde-gerekli-not-hesaplama": ["finalde kaç almalıyım", "finalde gerekli not hesaplama", "hedef not için final puanı", "vize final hedef ortalama"],
   "kredi-taksit-hesaplama": ["kredi taksit hesaplama", "aylık kredi taksiti hesaplayıcı", "kredi geri ödeme hesaplama", "kredi faiz hesaplama"],
   "bilesik-faiz-hesaplama": ["bileşik faiz hesaplama", "bileşik getiri hesaplayıcı", "faiz getirisi hesaplama", "yatırım dönem sonu tutarı"],
+  "basit-faiz-hesaplama": ["basit faiz hesaplama", "basit faiz getirisi", "anapara faiz hesaplayıcı", "günlük faiz hesabı"],
+  "doviz-hesaplama": ["döviz hesaplama", "döviz çevirici", "dolar TL hesaplama", "euro TL hesaplama", "TCMB döviz kuru", "döviz TL çevirme"],
   "yakit-tuketimi-hesaplama": ["yakıt tüketimi hesaplama", "araç 100 km kaç litre yakar", "L/100 km hesaplama", "araç yakıt maliyeti"],
   "elektrik-faturasi-hesaplama": ["elektrik tüketim maliyeti", "kWh hesaplama", "elektrik birim fiyat hesaplama", "tahmini enerji bedeli"],
   "is-gunu-hesaplama": ["iş günü hesaplama", "iki tarih arası iş günü", "hafta içi gün sayısı hesaplama", "resmî tatiller hariç iş günü"]
