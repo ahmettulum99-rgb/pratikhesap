@@ -36,7 +36,13 @@ Yeni bir araç eklemek için hesaplama fonksiyonunu ve araç tanımını katalo�
 
 ## Reklam alanları
 
-Gerçek reklam gösterimi kapalıdır. `src/components/AdSlot.tsx` ve `src/lib/ads.ts` reklam alanlarının metinlerini ve konumlarını merkezi olarak yönetir. AdSense entegrasyonu, bu bileşene ileride tek noktadan eklenebilir.
+AdSense yükleme kodu ortak layout'ta bulunur. Reklam yerleşimleri `src/components/AdSlot.tsx` ve `src/lib/ads.ts` üzerinden merkezi yönetilir; reklam alanları, yerleşimler yapılandırılana kadar kapalıdır. `public/ads.txt`, yayıncı hesabı için `https://www.hesappratik.xyz/ads.txt` adresinde sunulmak üzere yapılandırılmıştır. AdSense panelinde yayıncı hesabı ve domain durumunu onaylayın; dosyanın erişilebilirliğini ve yayıncı kimliğini panelinizdeki değerle karşılaştırın.
+
+Auto ads kullanılıyorsa AdSense panelinde site için otomatik reklamları etkinleştirin. Manuel reklam birimleri, her birimin AdSense panelinden alınan slot kimliği eklenmeden açılmaz.
+
+## Hesaplama araçları ve içerik
+
+Hesaplama araçları formülleri ve SEO arama ifadeleriyle katalogda tanımlanır. Yeni araç sayfaları metadata, canonical adres, breadcrumb ve sitemap'e katalogdan eklenir. `src/data/seo-keywords.ts` araca özgü, kullanıcı arama amacına uygun terimleri içerir; anahtar kelimeler sayfa içeriğini desteklemek içindir, sıralama garantisi vermez. Üniversite not katsayıları, kredi, elektrik tarifesi ve kredi maliyetleri kurum/sağlayıcıya göre değişebileceğinden araçlar kullandığı varsayımları sonuç sayfasında açıklar.
 
 ## SEO ve alan adı
 

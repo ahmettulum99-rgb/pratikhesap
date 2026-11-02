@@ -34,6 +34,27 @@ const dateField = (name: string, label: string): FieldDefinition => ({ name, lab
 const selectField = (name: string, label: string, options: FieldDefinition["options"]): FieldDefinition =>
   ({ name, label, type: "select", options });
 
+const letterGradeOptions = [
+  { label: "Harf notu seçin", value: "" },
+  { label: "AA (4,00)", value: "AA" },
+  { label: "BA (3,50)", value: "BA" },
+  { label: "BB (3,00)", value: "BB" },
+  { label: "CB (2,50)", value: "CB" },
+  { label: "CC (2,00)", value: "CC" },
+  { label: "DC (1,50)", value: "DC" },
+  { label: "DD (1,00)", value: "DD" },
+  { label: "FD (0,50)", value: "FD" },
+  { label: "FF (0,00)", value: "FF" }
+];
+
+const gpaFields = Array.from({ length: 5 }, (_, index) => {
+  const courseNumber = index + 1;
+  return [
+    selectField(`grade${courseNumber}`, `${courseNumber}. ders harf notu`, letterGradeOptions),
+    numberField(`credit${courseNumber}`, `${courseNumber}. ders kredisi`, "Örn. 3", "kredi")
+  ];
+}).flat();
+
 export const tools: ToolDefinition[] = [
   {
     id: "yuzde-hesaplama", name: "Yüzde hesaplama", category: "finans", popular: true,
@@ -253,6 +274,118 @@ export const tools: ToolDefinition[] = [
       numberField("amount", "Süre", "Örn. 1,5"),
       selectField("conversion", "Dönüşüm yönü", [{ label: "Saat → dakika", value: "hours-to-minutes" }, { label: "Dakika → saat", value: "minutes-to-hours" }, { label: "Dakika → saniye", value: "minutes-to-seconds" }])
     ]
+  },
+  {
+    id: "dortluk-not-sistemi-hesaplama", name: "4'lük not sistemi hesaplama", category: "egitim", popular: true,
+    description: "Harf notu ve ders kredilerini kullanarak 4 üzerinden ağırlıklı ortalamanızı bulun.",
+    title: "4'lük Not Sistemi Hesaplama – Üniversite GPA ve AGNO | PratikHesap",
+    metaDescription: "Üniversite harf notlarınızı ve AKTS ya da yerel kredi değerlerinizi girin; 4'lük sistemde ağırlıklı not ortalamanızı (GPA/AGNO) hesaplayın.",
+    intro: "Derslerinizin harf notunu ve kredi değerini girerek 4,00 üzerinden kredi ağırlıklı genel not ortalamanızı (GPA/AGNO) hesaplayın. En fazla beş ders ekleyebilir, kullanmadığınız ders alanlarını boş bırakabilirsiniz.",
+    formula: "4'lük ortalama = Σ (harf notu katsayısı × ders kredisi) ÷ Σ ders kredisi. Bu hesaplayıcıda AA=4,00; BA=3,50; BB=3,00; CB=2,50; CC=2,00; DC=1,50; DD=1,00; FD=0,50; FF=0,00 kullanılır.",
+    example: "3 kredilik AA ve 2 kredilik BB için ortalama: (4,00 × 3 + 3,00 × 2) ÷ (3 + 2) = 3,60 / 4,00.",
+    fields: gpaFields
+  },
+  {
+    id: "agirlikli-not-ortalamasi-hesaplama", name: "Ağırlıklı not ortalaması", category: "egitim", popular: true,
+    description: "Sınav notlarınızı vize, final ve ödev yüzdelerine göre birleştirin.",
+    title: "Ağırlıklı Not Ortalaması Hesaplama – Vize Final Notu | PratikHesap",
+    metaDescription: "Vize, final ve ödev notlarını kendi yüzdeleriyle birleştirin. Ağırlık toplamı %100 olacak şekilde dönem notunuzu hesaplayın.",
+    intro: "Üç değerlendirme notunu (ör. vize, final ve ödev) kendi ağırlıklarıyla hesaplayıp dönem ortalamasını bulun. Ağırlık yüzdelerinin toplamı tam olarak %100 olmalıdır.",
+    formula: "Ağırlıklı ortalama = (1. not × 1. ağırlık + 2. not × 2. ağırlık + 3. not × 3. ağırlık) ÷ 100",
+    example: "70 vize (%40), 80 final (%50) ve 100 ödev (%10): 70×0,40 + 80×0,50 + 100×0,10 = 78 puan.",
+    fields: [
+      numberField("score1", "1. değerlendirme notu", "Örn. 70", "puan"),
+      numberField("weight1", "1. değerlendirme ağırlığı", "Örn. 40", "%"),
+      numberField("score2", "2. değerlendirme notu", "Örn. 80", "puan"),
+      numberField("weight2", "2. değerlendirme ağırlığı", "Örn. 50", "%"),
+      numberField("score3", "3. değerlendirme notu", "Örn. 100", "puan"),
+      numberField("weight3", "3. değerlendirme ağırlığı", "Örn. 10", "%")
+    ]
+  },
+  {
+    id: "finalde-gerekli-not-hesaplama", name: "Finalde gerekli not hesaplama", category: "egitim",
+    description: "Hedef dönem ortalaması için finalden almanız gereken notu öğrenin.",
+    title: "Finalde Kaç Almalıyım? Gerekli Final Notu Hesaplama | PratikHesap",
+    metaDescription: "Ara sınav notunuzu, final yüzdesini ve hedef ortalamayı girin; hedefe ulaşmak için finalde gereken notu hesaplayın.",
+    intro: "Ara sınav notunuz ve finalin ders başarı notuna katkı yüzdesiyle hedef dönem notuna ulaşmak için final sınavından kaç almanız gerektiğini hesaplayın. Dersinizin resmi değerlendirme ağırlıklarını kullanın.",
+    formula: "Gerekli final notu = [Hedef dönem notu − Ara sınav notu × (1 − Final ağırlığı)] ÷ Final ağırlığı",
+    example: "Vize 60, vize ağırlığı %40, final ağırlığı %60 ve hedef 70 ise finalden en az (70 − 60×0,40) ÷ 0,60 = 76,67 gerekir.",
+    fields: [
+      numberField("currentGrade", "Ara sınav / vize notu", "Örn. 60", "puan"),
+      numberField("targetGrade", "Hedef dönem notu", "Örn. 70", "puan"),
+      numberField("finalWeight", "Final sınavı ağırlığı", "Örn. 60", "%")
+    ]
+  },
+  {
+    id: "kredi-taksit-hesaplama", name: "Kredi taksit hesaplama", category: "finans",
+    description: "Kredi tutarı, aylık faiz ve vadeye göre yaklaşık eşit taksiti bulun.",
+    title: "Kredi Taksit Hesaplama – Aylık Taksit ve Geri Ödeme | PratikHesap",
+    metaDescription: "Kredi tutarı, aylık faiz oranı ve vade ayını girin; yaklaşık eşit taksiti, toplam geri ödemeyi ve faiz tutarını görün.",
+    intro: "Kredi tutarı, aylık faiz oranı ve vade bilgisiyle sabit taksitli ödeme planının yaklaşık aylık taksitini hesaplayın. Vergi, sigorta, tahsis ücreti ve bankaya özel koşullar bu tahmine dahil değildir.",
+    formula: "Aylık taksit = Anapara × r × (1+r)^n ÷ [(1+r)^n − 1]. Faizsiz durumda taksit = Anapara ÷ vade; r aylık faiz oranı, n ay sayısıdır.",
+    example: "100.000 TL kredi, aylık %2 faiz ve 12 ay vadede sabit taksit yaklaşık 9.455,96 TL; toplam geri ödeme yaklaşık 113.471,52 TL'dir. Gerçek banka teklifi masraf ve sözleşme koşullarına göre değişir.",
+    fields: [
+      numberField("principal", "Kredi tutarı", "Örn. 100000", "₺"),
+      numberField("monthlyRate", "Aylık faiz oranı", "Örn. 2,5", "%"),
+      numberField("months", "Vade", "Örn. 12", "ay")
+    ]
+  },
+  {
+    id: "bilesik-faiz-hesaplama", name: "Bileşik faiz hesaplama", category: "finans",
+    description: "Başlangıç tutarını faiz sıklığı ve süreyle bileşik olarak hesaplayın.",
+    title: "Bileşik Faiz Hesaplama – Faiz Getirisi ve Dönem Sonu Tutarı | PratikHesap",
+    metaDescription: "Başlangıç tutarı, yıllık oran ve süreyle bileşik faiz hesabı yapın; yıllık, aylık veya günlük bileşikleşme sıklığını seçin.",
+    intro: "Başlangıç birikiminin belirli bir yıllık oranla düzenli aralıklarla bileşik getiride nasıl büyüyeceğini tahmin edin. Ek yatırımlar, vergiler, enflasyon ve masraflar hesaba dahil değildir.",
+    formula: "Dönem sonu tutarı = Başlangıç tutarı × (1 + yıllık oran ÷ bileşikleşme sayısı)^(bileşikleşme sayısı × yıl)",
+    example: "10.000 TL, yıllık %12 nominal oran ve aylık bileşikleşmeyle 1 yıl sonunda yaklaşık 11.268,25 TL olur; vergiler ve ek ödemeler hesaba dahil değildir.",
+    fields: [
+      numberField("principal", "Başlangıç tutarı", "Örn. 10000", "₺"),
+      numberField("annualRate", "Yıllık oran", "Örn. 12", "%"),
+      numberField("years", "Süre", "Örn. 5", "yıl"),
+      selectField("periods", "Bileşikleşme sıklığı", [
+        { label: "Yıllık", value: "1" },
+        { label: "Üç aylık", value: "4" },
+        { label: "Aylık", value: "12" },
+        { label: "Günlük (365)", value: "365" }
+      ])
+    ]
+  },
+  {
+    id: "yakit-tuketimi-hesaplama", name: "Yakıt tüketimi hesaplama", category: "gunluk-yasam",
+    description: "Mesafe ve yakıt miktarından 100 km tüketimini ve yakıt maliyetini bulun.",
+    title: "Yakıt Tüketimi Hesaplama – Araç 100 km'de Kaç Litre Yakar? | PratikHesap",
+    metaDescription: "Gidilen mesafe, harcanan benzin veya motorin ve litre fiyatıyla aracın L/100 km tüketimini ve yakıt maliyetini hesaplayın.",
+    intro: "Kilometre sayacı veya yol bilgisayarından aldığınız mesafe ve yakıt miktarıyla ortalama tüketimi litre/100 km cinsinden hesaplayın. Litre fiyatını girerek yakıt harcamasını da yaklaşık görün.",
+    formula: "Ortalama tüketim (L/100 km) = Harcanan yakıt (L) ÷ Mesafe (km) × 100; yakıt maliyeti = litre × litre fiyatı",
+    example: "500 km'de 35 litre yakıt ve 45 TL/litre fiyatla tüketim 7 L/100 km, yakıt maliyeti 1.575 TL'dir.",
+    fields: [
+      numberField("distance", "Gidilen mesafe", "Örn. 500", "km"),
+      numberField("fuel", "Harcanan yakıt", "Örn. 35", "L"),
+      numberField("price", "Yakıt litre fiyatı", "Örn. 45", "₺/L")
+    ]
+  },
+  {
+    id: "elektrik-faturasi-hesaplama", name: "Elektrik tüketim maliyeti", category: "gunluk-yasam",
+    description: "kWh tüketimi ve birim fiyatla yaklaşık enerji bedelini hesaplayın.",
+    title: "Elektrik Faturası Hesaplama – kWh Tüketim Maliyeti | PratikHesap",
+    metaDescription: "Elektrik tüketiminizi kWh, enerji birim fiyatını TL/kWh olarak girin; yaklaşık enerji bedelinizi hesaplayın.",
+    intro: "Elektrik tüketimini ve kullandığınız tarifenin enerji birim fiyatını çarparak yaklaşık enerji bedelini bulun. Bu basit tahmin vergi, dağıtım, kademe veya diğer fatura kalemlerini içermez.",
+    formula: "Yaklaşık enerji bedeli = Tüketim (kWh) × Enerji birim fiyatı (TL/kWh)",
+    example: "250 kWh tüketim ve 2,50 TL/kWh enerji birim fiyatında yaklaşık enerji bedeli 625 TL'dir; toplam fatura farklı olabilir.",
+    fields: [
+      numberField("usage", "Elektrik tüketimi", "Örn. 250", "kWh"),
+      numberField("unitPrice", "Enerji birim fiyatı", "Örn. 2,5", "₺/kWh")
+    ]
+  },
+  {
+    id: "is-gunu-hesaplama", name: "İş günü hesaplama", category: "tarih",
+    description: "İki tarih arasındaki hafta içi günleri sayın; resmî tatiller hariçtir.",
+    title: "İş Günü Hesaplama – İki Tarih Arası Hafta İçi Gün Sayısı | PratikHesap",
+    metaDescription: "Başlangıç ve bitiş tarihini seçerek aradaki hafta içi iş günü sayısını bulun; hesaplama resmî tatilleri kapsamaz.",
+    intro: "İki tarih arasındaki pazartesi-cuma günlerini sayın. Tarihler hangi sırayla girilirse girilsin, erken tarih sayılmaz ve geç tarih sayılır; resmî ve yerel tatiller bu basit hesaplamaya dahil değildir.",
+    formula: "İş günü farkı = Erken tarihten sonraki geç tarihe kadar olan pazartesi-cuma günlerinin sayısı; erken tarih hariç, geç tarih dahil edilir.",
+    example: "Pazartesi başlangıç ile sonraki pazartesi bitiş arasında, başlangıç hariç ve bitiş dahil 5 iş günü vardır.",
+    fields: [dateField("startDate", "Başlangıç tarihi"), dateField("endDate", "Bitiş tarihi")]
   }
 ];
 

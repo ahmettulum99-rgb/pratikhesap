@@ -86,4 +86,52 @@ describe("education and daily-life calculators", () => {
     expect(calculate("saat-dakika-donusturme", { amount: "1,5", conversion: "hours-to-minutes" }).value).toBe(90);
     expect(() => calculate("boy-kilo-orani-hesaplama", { height: "0", weight: "65" })).toThrow();
   });
+
+  it("calculates a credit-weighted four-point GPA", () => {
+    const gpa = calculate("dortluk-not-sistemi-hesaplama", {
+      grade1: "AA", credit1: "3",
+      grade2: "BB", credit2: "2"
+    });
+    expect(gpa.value).toBe(3.6);
+    expect(gpa.unit).toBe(" / 4,00");
+    expect(calculate("dortluk-not-sistemi-hesaplama", { grade1: "FF", credit1: "4" }).value).toBe(0);
+    expect(() => calculate("dortluk-not-sistemi-hesaplama", {})).toThrow(/En az bir ders/);
+    expect(() => calculate("dortluk-not-sistemi-hesaplama", { grade1: "AA", credit1: "" })).toThrow(/birlikte/);
+    expect(() => calculate("dortluk-not-sistemi-hesaplama", { grade1: "AA", credit1: "0" })).toThrow(/kredi/);
+  });
+
+  it("calculates weighted grades and the final exam grade needed", () => {
+    expect(calculate("agirlikli-not-ortalamasi-hesaplama", {
+      score1: "70", weight1: "40", score2: "80", weight2: "50", score3: "100", weight3: "10"
+    }).value).toBe(78);
+    expect(() => calculate("agirlikli-not-ortalamasi-hesaplama", {
+      score1: "70", weight1: "40", score2: "80", weight2: "40", score3: "100", weight3: "10"
+    })).toThrow(/%100/);
+    expect(calculate("finalde-gerekli-not-hesaplama", {
+      currentGrade: "60", targetGrade: "70", finalWeight: "60"
+    }).value).toBeCloseTo(76.6667, 3);
+    expect(calculate("finalde-gerekli-not-hesaplama", {
+      currentGrade: "100", targetGrade: "50", finalWeight: "50"
+    }).value).toBe(0);
+    expect(calculate("finalde-gerekli-not-hesaplama", {
+      currentGrade: "0", targetGrade: "100", finalWeight: "50"
+    }).displayValue).toBe("Mümkün değil");
+  });
+
+  it("calculates loan and compound interest with a zero-interest case", () => {
+    expect(calculate("kredi-taksit-hesaplama", { principal: "1200", monthlyRate: "0", months: "12" }).value).toBe(100);
+    expect(calculate("kredi-taksit-hesaplama", { principal: "100000", monthlyRate: "2", months: "12" }).value).toBeCloseTo(9455.96, 2);
+    expect(() => calculate("kredi-taksit-hesaplama", { principal: "1000", monthlyRate: "2", months: "1,5" })).toThrow();
+    expect(calculate("bilesik-faiz-hesaplama", { principal: "1000", annualRate: "10", years: "1", periods: "1" }).value).toBe(1100);
+    expect(calculate("bilesik-faiz-hesaplama", { principal: "1000", annualRate: "0", years: "10", periods: "12" }).value).toBe(1000);
+  });
+
+  it("estimates fuel, electricity and business-day calculations", () => {
+    expect(calculate("yakit-tuketimi-hesaplama", { distance: "500", fuel: "35", price: "45" }).value).toBeCloseTo(7);
+    expect(calculate("yakit-tuketimi-hesaplama", { distance: "500", fuel: "35", price: "45" }).details?.[0]).toContain("1.575");
+    expect(calculate("elektrik-faturasi-hesaplama", { usage: "250", unitPrice: "2,5" }).value).toBe(625);
+    expect(calculate("is-gunu-hesaplama", { startDate: "2024-01-08", endDate: "2024-01-15" }).value).toBe(5);
+    expect(calculate("is-gunu-hesaplama", { startDate: "2024-01-15", endDate: "2024-01-08" }).value).toBe(5);
+    expect(calculate("is-gunu-hesaplama", { startDate: "2024-01-06", endDate: "2024-01-07" }).value).toBe(0);
+  });
 });

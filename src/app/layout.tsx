@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import Script from "next/script";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { AdSlot } from "@/components/AdSlot";
@@ -16,6 +15,20 @@ export const metadata: Metadata = {
     template: "%s"
   },
   description: "Finans, tarih, eğitim ve günlük yaşam için ücretsiz, kolay ve hızlı hesaplama araçları.",
+  keywords: [
+    "hesaplama araçları",
+    "ücretsiz hesap makinesi",
+    "çevrimiçi hesaplama",
+    "yüzde hesaplama",
+    "maaş zam hesaplama",
+    "KDV hesaplama",
+    "yaş hesaplama",
+    "not ortalaması hesaplama",
+    "4'lük not sistemi hesaplama",
+    "vize final hesaplama",
+    "tarih hesaplama",
+    "birim dönüştürme"
+  ],
   applicationName: "PratikHesap",
   verification: {
     google: "IrtJCR_0HoQKTJDawAT19KNVGhkNvTABV-nO6cyC6jw"
@@ -53,11 +66,9 @@ const structuredData = [
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="tr">
-      <Script
-        src={adsenseScriptSrc}
-        strategy="beforeInteractive"
-        crossOrigin="anonymous"
-      />
+      <head>
+        <script async src={adsenseScriptSrc} crossOrigin="anonymous" />
+      </head>
       <body>
         {structuredData.map((data) => <JsonLd key={data["@type"]} data={data} />)}
         <Header />

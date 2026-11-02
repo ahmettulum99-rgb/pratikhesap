@@ -6,6 +6,7 @@ import { Breadcrumb } from "@/components/Breadcrumb";
 import { CalculatorForm } from "@/components/CalculatorForm";
 import { FAQ } from "@/components/FAQ";
 import { categories, getCategory, getTool, tools } from "@/data/tools";
+import { getToolKeywords } from "@/data/seo-keywords";
 
 export function generateStaticParams() {
   return tools.map((tool) => ({ slug: tool.id }));
@@ -19,6 +20,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   return {
     title: tool.title,
     description: tool.metaDescription,
+    keywords: getToolKeywords(tool),
     alternates: { canonical: `/${tool.id}` },
     openGraph: { title: tool.title, description: tool.metaDescription, url: `/${tool.id}`, type: "website" }
   };

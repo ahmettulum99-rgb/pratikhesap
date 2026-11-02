@@ -253,6 +253,150 @@ export function calculateTimeConversion(values: CalculatorValues): CalculatorRes
   throw new Error("Geçerli bir dönüşüm seçin.");
 }
 
+export function calculateFourPointGpa(values: CalculatorValues): CalculatorResult {
+  const gradePoints: Record<string, number> = {
+    AA: 4, BA: 3.5, BB: 3, CB: 2.5, CC: 2, DC: 1.5, DD: 1, FD: 0.5, FF: 0
+  };
+  let weightedPoints = 0;
+  let totalCredits = 0;
+  let courseCount = 0;
+
+  for (let course = 1; course <= 5; course++) {
+    const grade = values[`grade${course}`]?.trim() ?? "";
+    const rawCredit = values[`credit${course}`]?.trim() ?? "";
+    if (!grade && !rawCredit) continue;
+    if (!grade || !rawCredit) throw new Error(`${course}. ders için harf notu ve kredi bilgisini birlikte girin.`);
+    const credit = parseTurkishNumber(rawCredit);
+    if (!Number.isFinite(credit) || credit <= 0) throw new Error(`${course}. ders kredisi sıfırdan büyük geçerli bir sayı olmalıdır.`);
+    if (!(grade in gradePoints)) throw new Error(`${course}. ders için geçerli bir harf notu seçin.`);
+    weightedPoints += gradePoints[grade] * credit;
+    totalCredits += credit;
+    courseCount++;
+  }
+
+  if (courseCount === 0) throw new Error("En az bir dersin harf notunu ve kredisini girin.");
+  return result("4'lük sistemde ağırlıklı not ortalaması", weightedPoints / totalCredits, " / 4,00", [
+    `${courseCount} ders ve ${formatTurkishNumber(totalCredits)} toplam kredi üzerinden hesaplandı.`,
+    "AA=4,00; BA=3,50; BB=3,00; CB=2,50; CC=2,00; DC=1,50; DD=1,00; FD=0,50; FF=0,00. Üniversitenizin katsayı tablosu farklı olabilir."
+  ]);
+}
+
+export function calculateWeightedGrade(values: CalculatorValues): CalculatorResult {
+  let weightedTotal = 0;
+  let totalWeight = 0;
+  for (let exam = 1; exam <= 3; exam++) {
+    const score = requiredNumber(values, `score${exam}`, `${exam}. sınav notu`);
+    const weight = requiredNumber(values, `weight${exam}`, `${exam}. sınav ağırlığı`);
+    if (score < 0 || score > 100) throw new Error("Sınav notları 0 ile 100 arasında olmalıdır.");
+    if (weight < 0 || weight > 100) throw new Error("Sınav ağırlıkları %0 ile %100 arasında olmalıdır.");
+    weightedTotal += score * weight;
+    totalWeight += weight;
+  }
+  if (Math.abs(totalWeight - 100) > 0.001) throw new Error(`Sınav ağırlıklarının toplamı %100 olmalıdır. Şu anki toplam: %${formatTurkishNumber(totalWeight)}.`);
+  return result("Ağırlıklı not ortalaması", weightedTotal / 100, "puan");
+}
+
+export function calculateRequiredFinalGrade(values: CalculatorValues): CalculatorResult {
+  const currentGrade = requiredNumber(values, "currentGrade", "Mevcut ara sınav notu");
+  const targetGrade = requiredNumber(values, "targetGrade", "Hedef dönem notu");
+  const finalWeight = requiredNumber(values, "finalWeight", "Final sınavı ağırlığı");
+  if (currentGrade < 0 || currentGrade > 100 || targetGrade < 0 || targetGrade > 100) {
+    throw new Error("Notlar 0 ile 100 arasında olmalıdır.");
+  }
+  if (finalWeight <= 0 || finalWeight > 100) throw new Error("Final ağırlığı %0'dan büyük ve en fazla %100 olmalıdır.");
+  const needed = (targetGrade - currentGrade * (100 - finalWeight) / 100) / (finalWeight / 100);
+  if (needed <= 0) {
+    return result("Hedef için gereken minimum final notu", 0, "puan", [
+      "Ara sınav notunuzla hedef ortalamaya finalden 0 alınsa bile ulaşabilirsiniz."
+    ]);
+  }
+  if (needed > 100) {
+    return {
+      label: "Hedef not",
+      value: needed,
+      displayValue: "Mümkün değil",
+      details: [`Bu hedef için finalden ${formatTurkishNumber(needed)} puan gerekir; not aralığı 0–100 olduğundan hedef mevcut ağırlıklarla ulaşılamaz.`]
+    };
+  }
+  return result("Hedef için gereken minimum final notu", needed, "puan", [
+    `${formatTurkishNumber(currentGrade)} ara sınav notu ve finalin %${formatTurkishNumber(finalWeight)} ağırlığı ile hedef dönem notu ${formatTurkishNumber(targetGrade)} puandır.`,
+    "Sınav notu tam sayı olarak veriliyorsa gereken değeri bir üst tam sayıya yuvarlayın."
+  ]);
+}
+
+export function calculateLoanInstallment(values: CalculatorValues): CalculatorResult {
+  const principal = requiredNumber(values, "principal", "Kredi tutarı");
+  const monthlyRate = requiredNumber(values, "monthlyRate", "Aylık faiz oranı");
+  const months = requiredNumber(values, "months", "Vade");
+  if (principal <= 0 || monthlyRate < 0 || !Number.isSafeInteger(months) || months <= 0) {
+    throw new Error("Kredi tutarı ve vade pozitif olmalı; faiz oranı negatif olmamalıdır.");
+  }
+  const rate = monthlyRate / 100;
+  const installment = rate === 0
+    ? principal / months
+    : principal * rate * (1 + rate) ** months / ((1 + rate) ** months - 1);
+  const totalRepayment = installment * months;
+  return result("Tahmini aylık taksit", installment, "₺", [
+    `Toplam geri ödeme: ${formatTurkishNumber(totalRepayment)} ₺`,
+    `Toplam faiz: ${formatTurkishNumber(totalRepayment - principal)} ₺. Vergi, sigorta, tahsis ücreti ve diğer masraflar dahil değildir.`
+  ]);
+}
+
+export function calculateCompoundInterest(values: CalculatorValues): CalculatorResult {
+  const principal = requiredNumber(values, "principal", "Başlangıç tutarı");
+  const annualRate = requiredNumber(values, "annualRate", "Yıllık getiri oranı");
+  const years = requiredNumber(values, "years", "Süre");
+  const periods = requiredNumber(values, "periods", "Yıllık bileşikleşme sayısı");
+  if (principal < 0 || annualRate < 0 || years < 0 || !Number.isSafeInteger(periods) || periods <= 0) {
+    throw new Error("Tutar ve oran negatif olamaz; süre sıfır veya daha büyük, bileşikleşme sayısı pozitif tam sayı olmalıdır.");
+  }
+  const endingBalance = principal * (1 + annualRate / 100 / periods) ** (periods * years);
+  return result("Tahmini dönem sonu tutarı", endingBalance, "₺", [
+    `Getiri: ${formatTurkishNumber(endingBalance - principal)} ₺`,
+    "Düzenli ek ödeme, vergi, enflasyon ve işlem masrafları hesaba katılmaz; sonuç yatırım tavsiyesi değildir."
+  ]);
+}
+
+export function calculateFuelConsumption(values: CalculatorValues): CalculatorResult {
+  const distance = requiredNumber(values, "distance", "Mesafe");
+  const fuel = requiredNumber(values, "fuel", "Harcanan yakıt");
+  const price = requiredNumber(values, "price", "Litre fiyatı");
+  if (distance <= 0 || fuel < 0 || price < 0) throw new Error("Mesafe sıfırdan büyük olmalı; yakıt ve litre fiyatı negatif olmamalıdır.");
+  const consumption = fuel / distance * 100;
+  return result("Ortalama yakıt tüketimi", consumption, "L/100 km", [
+    `Yakıt maliyeti: ${formatTurkishNumber(fuel * price)} ₺`,
+    `Yakıt maliyeti kilometre başına: ${formatTurkishNumber(fuel * price / distance)} ₺/km`
+  ]);
+}
+
+export function calculateElectricityCost(values: CalculatorValues): CalculatorResult {
+  const usage = requiredNumber(values, "usage", "Elektrik tüketimi");
+  const unitPrice = requiredNumber(values, "unitPrice", "Birim fiyat");
+  if (usage < 0 || unitPrice < 0) throw new Error("Tüketim ve birim fiyat negatif olamaz.");
+  return result("Tahmini enerji bedeli", usage * unitPrice, "₺", [
+    `${formatTurkishNumber(usage)} kWh × ${formatTurkishNumber(unitPrice)} ₺/kWh`,
+    "Vergi, dağıtım bedeli, kademe, fon ve diğer tarife kalemleri dahil değildir; fatura tutarı farklı olabilir."
+  ]);
+}
+
+export function calculateBusinessDays(values: CalculatorValues): CalculatorResult {
+  const start = dateValue(values, "startDate", "Başlangıç tarihi");
+  const end = dateValue(values, "endDate", "Bitiş tarihi");
+  const firstDay = start < end ? start : end;
+  const lastDay = start < end ? end : start;
+  const dayCount = (lastDay.getTime() - firstDay.getTime()) / 86_400_000;
+  const fullWeeks = Math.floor(dayCount / 7);
+  const remainingDays = dayCount % 7;
+  let count = fullWeeks * 5;
+  for (let offset = 1; offset <= remainingDays; offset++) {
+    const weekday = (firstDay.getUTCDay() + offset) % 7;
+    if (weekday !== 0 && weekday !== 6) count++;
+  }
+  return result("İş günü farkı", count, "iş günü", [
+    "Başlangıç tarihi sayılmaz; bitiş tarihi sayılır. Resmî ve yerel tatiller hesaba katılmaz."
+  ]);
+}
+
 type Calculator = (values: CalculatorValues, now: Date) => CalculatorResult;
 
 const calculators: Record<string, Calculator> = {
@@ -276,7 +420,15 @@ const calculators: Record<string, Calculator> = {
   "boy-kilo-orani-hesaplama": calculateBmi,
   "litre-donusumu": calculateVolumeConversion,
   "kilogram-donusumu": calculateWeightConversion,
-  "saat-dakika-donusturme": calculateTimeConversion
+  "saat-dakika-donusturme": calculateTimeConversion,
+  "dortluk-not-sistemi-hesaplama": calculateFourPointGpa,
+  "agirlikli-not-ortalamasi-hesaplama": calculateWeightedGrade,
+  "finalde-gerekli-not-hesaplama": calculateRequiredFinalGrade,
+  "kredi-taksit-hesaplama": calculateLoanInstallment,
+  "bilesik-faiz-hesaplama": calculateCompoundInterest,
+  "yakit-tuketimi-hesaplama": calculateFuelConsumption,
+  "elektrik-faturasi-hesaplama": calculateElectricityCost,
+  "is-gunu-hesaplama": calculateBusinessDays
 };
 
 export function calculate(toolId: string, values: CalculatorValues, now = new Date()): CalculatorResult {
