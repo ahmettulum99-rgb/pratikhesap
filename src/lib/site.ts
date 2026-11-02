@@ -1,1 +1,6 @@
-export const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://hesappratik.xyz").replace(/\/+$/, "");
+const configuredSiteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.hesappratik.xyz").replace(/\/+$/, "");
+
+export const siteUrl = configuredSiteUrl.replace(
+  /^https:\/\/hesappratik\.xyz$/i,
+  "https://www.hesappratik.xyz"
+);
