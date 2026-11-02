@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import Script from "next/script";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { AdSlot } from "@/components/AdSlot";
 import { JsonLd } from "@/components/JsonLd";
+import { adsenseScriptSrc } from "@/lib/ads";
 import { siteUrl } from "@/lib/site";
 import "./globals.css";
 
@@ -49,6 +51,11 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
   return (
     <html lang="tr">
       <body>
+        <Script
+          src={adsenseScriptSrc}
+          strategy="afterInteractive"
+          crossOrigin="anonymous"
+        />
         {structuredData.map((data) => <JsonLd key={data["@type"]} data={data} />)}
         <Header />
         <AdSlot placement="header" className="container-page my-3" />

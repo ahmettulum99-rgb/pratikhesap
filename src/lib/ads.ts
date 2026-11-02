@@ -7,3 +7,5 @@ export const adSlots = {
 
 export type AdSlotId = keyof typeof adSlots;
 export const adsEnabled = false;
+export const adsensePublisherId = "ca-pub-6994844378081796";
+export const adsenseScriptSrc = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsensePublisherId}`;
