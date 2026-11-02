@@ -1,1 +1,1 @@
-export const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://hesappratik.com.tr").replace(/\/+$/, "");
+export const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://hesappratik.xyz").replace(/\/+$/, "");

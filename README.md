@@ -40,4 +40,4 @@ Gerçek reklam gösterimi kapalıdır. `src/components/AdSlot.tsx` ve `src/lib/a
 
 ## SEO ve alan adı
 
-Site adresi `NEXT_PUBLIC_SITE_URL` ile yapılandırılır; varsayılan değer `https://hesappratik.com.tr` adresidir. Vercel'de özel alan adınızı bağladıktan sonra `NEXT_PUBLIC_SITE_URL=https://hesappratik.com.tr` ortam değişkenini ekleyip yeniden deploy edin. Metadata, canonical adresler, sitemap, robots.txt ve WebSite/Organization/BreadcrumbList yapılandırılmış verileri bu adresi kullanır.
+Site adresi `NEXT_PUBLIC_SITE_URL` ile yapılandırılır; varsayılan değer `https://hesappratik.xyz` adresidir. Vercel'de özel alan adınızı bağladıktan sonra `NEXT_PUBLIC_SITE_URL=https://hesappratik.xyz` ortam değişkenini ekleyip yeniden deploy edin. Metadata, canonical adresler, sitemap, robots.txt ve WebSite/Organization/BreadcrumbList yapılandırılmış verileri bu adresi kullanır.
