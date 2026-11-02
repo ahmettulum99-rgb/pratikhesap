@@ -50,13 +50,11 @@ const structuredData = [
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="tr">
-      <head>
-        <Script
-          src={adsenseScriptSrc}
-          strategy="beforeInteractive"
-          crossOrigin="anonymous"
-        />
-      </head>
+      <Script
+        src={adsenseScriptSrc}
+        strategy="beforeInteractive"
+        crossOrigin="anonymous"
+      />
       <body>
         {structuredData.map((data) => <JsonLd key={data["@type"]} data={data} />)}
         <Header />
