@@ -50,12 +50,14 @@ const structuredData = [
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="tr">
-      <body>
+      <head>
         <Script
           src={adsenseScriptSrc}
-          strategy="afterInteractive"
+          strategy="beforeInteractive"
           crossOrigin="anonymous"
         />
+      </head>
+      <body>
         {structuredData.map((data) => <JsonLd key={data["@type"]} data={data} />)}
         <Header />
         <AdSlot placement="header" className="container-page my-3" />
