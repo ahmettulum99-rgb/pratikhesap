@@ -20,8 +20,14 @@ export function createPageMetadata({ title, description, path, keywords }: PageM
       siteName: "PratikHesap",
       title,
       description,
-      url: `${siteUrl}${path === "/" ? "" : path}`
+      url: `${siteUrl}${path === "/" ? "" : path}`,
+      images: [{
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "PratikHesap – Hesaplamak artık çok kolay"
+      }]
     },
-    twitter: { card: "summary", title, description }
+    twitter: { card: "summary_large_image", title, description, images: ["/og-image.png"] }
   };
 }

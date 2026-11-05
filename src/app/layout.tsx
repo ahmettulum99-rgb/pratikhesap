@@ -43,12 +43,19 @@ export const metadata: Metadata = {
     siteName: "PratikHesap",
     title: "PratikHesap – Hesaplamak artık çok kolay",
     description: "Günlük ihtiyaçlarınız için ücretsiz hesaplama araçları.",
-    url: "/"
+    url: "/",
+    images: [{
+      url: "/og-image.png",
+      width: 1200,
+      height: 630,
+      alt: "PratikHesap – Hesaplamak artık çok kolay"
+    }]
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "PratikHesap – Hesaplamak artık çok kolay",
-    description: "Finans, tarih, eğitim ve günlük yaşam için ücretsiz, kolay ve hızlı hesaplama araçları."
+    description: "Finans, tarih, eğitim ve günlük yaşam için ücretsiz, kolay ve hızlı hesaplama araçları.",
+    images: ["/og-image.png"]
   },
   robots: { index: true, follow: true }
 };
@@ -61,6 +68,7 @@ const structuredData = [
     name: "PratikHesap",
     url: siteUrl,
     description: "Ücretsiz çevrimiçi hesaplama araçları.",
+    inLanguage: "tr-TR",
     publisher: { "@id": `${siteUrl}/#organization` }
   },
   {
@@ -68,7 +76,12 @@ const structuredData = [
     "@type": "Organization",
     "@id": `${siteUrl}/#organization`,
     name: "PratikHesap",
-    url: siteUrl
+    url: siteUrl,
+    description: "Ücretsiz çevrimiçi hesaplama araçları.",
+    logo: {
+      "@type": "ImageObject",
+      url: `${siteUrl}/icon.svg`
+    }
   }
 ];
 
@@ -80,9 +93,10 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
       </head>
       <body>
         {structuredData.map((data) => <JsonLd key={data["@type"]} data={data} />)}
+        <a className="skip-link" href="#main-content">İçeriğe geç</a>
         <Header />
         <AdSlot placement="header" className="container-page my-3" />
-        {children}
+        <div id="main-content" tabIndex={-1}>{children}</div>
         <AdSlot placement="footer" className="container-page mt-8" />
         <Footer />
       </body>

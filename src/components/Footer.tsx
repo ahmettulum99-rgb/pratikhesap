@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { categories } from "@/data/tools";
+import { ShareButton } from "@/components/ShareButton";
 
 export function Footer() {
   return (
@@ -8,6 +9,7 @@ export function Footer() {
         <div>
           <Link href="/" className="text-lg font-extrabold tracking-tight text-navy">Pratik<span className="text-blue">Hesap</span></Link>
           <p className="mt-3 max-w-sm text-sm leading-6 text-slate-600">Hesaplamak artık çok kolay. Günlük ihtiyaçlarınız için ücretsiz ve pratik hesaplama araçları.</p>
+          <ShareButton />
         </div>
         <div>
           <h2 className="text-sm font-bold text-navy">Kategoriler</h2>

@@ -11,6 +11,7 @@ export function PageStructuredData({ name, description, path }: { name: string; 
       url: pageUrl,
       name,
       description,
+      inLanguage: "tr-TR",
       isPartOf: { "@id": `${siteUrl}/#website` }
     }} />
   );

@@ -44,14 +44,27 @@ describe("calculator catalog", () => {
       expect(page.openGraph).toMatchObject({
         title: tools[index].title,
         description: tools[index].metaDescription,
-        url: `https://www.hesappratik.xyz/${tools[index].id}`
+        url: `https://www.hesappratik.xyz/${tools[index].id}`,
+        images: [{
+          url: "/og-image.png",
+          width: 1200,
+          height: 630
+        }]
       });
       expect(page.twitter).toMatchObject({
-        card: "summary",
+        card: "summary_large_image",
         title: tools[index].title,
-        description: tools[index].metaDescription
+        description: tools[index].metaDescription,
+        images: ["/og-image.png"]
       });
     }
+  });
+
+  it("publishes the shared social image as a 1200 by 630 PNG", () => {
+    const image = readFileSync(new URL("../../public/og-image.png", import.meta.url));
+    expect(image.subarray(0, 8)).toEqual(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+    expect(image.readUInt32BE(16)).toBe(1200);
+    expect(image.readUInt32BE(20)).toBe(630);
   });
 
   it("uses only valid, distinct, non-self internal recommendations for each calculator", () => {

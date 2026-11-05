@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, type KeyboardEvent } from "react";
 import type { ToolDefinition } from "@/data/tools";
 import { calculate, formatTurkishNumber, type CalculatorResult, type CalculatorValues } from "@/lib/calculations";
 
@@ -38,8 +38,7 @@ export function CalculatorForm({ tool }: { tool: Pick<ToolDefinition, "id" | "fi
     setError("");
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function calculateResult() {
     setError("");
     setIsCalculating(true);
     try {
@@ -71,8 +70,15 @@ export function CalculatorForm({ tool }: { tool: Pick<ToolDefinition, "id" | "fi
     }
   }
 
+  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.key === "Enter" && event.target instanceof HTMLInputElement) {
+      event.preventDefault();
+      void calculateResult();
+    }
+  }
+
   return (
-    <form onSubmit={handleSubmit} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-card sm:p-7" noValidate>
+    <div role="form" aria-label="Hesaplama aracı" onKeyDown={handleKeyDown} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-card sm:p-7">
       <div className="grid gap-5 sm:grid-cols-2">
         {tool.fields.map((field) => (
           <label key={field.name} className="block">
@@ -107,7 +113,7 @@ export function CalculatorForm({ tool }: { tool: Pick<ToolDefinition, "id" | "fi
           </label>
         ))}
       </div>
-      <button type="submit" disabled={isCalculating} aria-busy={isCalculating} className="primary-button mt-6 w-full disabled:cursor-wait disabled:opacity-70 sm:w-auto">
+      <button type="button" onClick={calculateResult} disabled={isCalculating} aria-busy={isCalculating} className="primary-button mt-6 w-full disabled:cursor-wait disabled:opacity-70 sm:w-auto">
         {isCalculating ? "Kur alınıyor..." : "Hesapla"}
       </button>
       {error && <p role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>}
@@ -120,6 +126,6 @@ export function CalculatorForm({ tool }: { tool: Pick<ToolDefinition, "id" | "fi
           {result.details?.map((detail) => <p key={detail} className="mt-2 text-sm text-slate-600">{detail}</p>)}
         </div>
       )}
-    </form>
+    </div>
   );
 }

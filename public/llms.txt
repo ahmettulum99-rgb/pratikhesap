@@ -1,0 +1,10 @@
+# PratikHesap
+
+> PratikHesap provides free Turkish-language calculators for finance, dates, education, and everyday use.
+
+- Website: https://www.hesappratik.xyz/
+- Sitemap: https://www.hesappratik.xyz/sitemap.xml
+- Finance calculators: https://www.hesappratik.xyz/finans
+- Date calculators: https://www.hesappratik.xyz/tarih
+- Education calculators: https://www.hesappratik.xyz/egitim
+- Everyday calculators: https://www.hesappratik.xyz/gunluk-yasam

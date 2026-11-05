@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useState } from "react";
 import { ArrowRight, Search } from "lucide-react";
 
 type SearchTool = {
@@ -24,15 +24,14 @@ export function HomeToolSearch({ tools }: { tools: SearchTool[] }) {
       .slice(0, 5);
   }, [query, tools]);
 
-  function submitSearch(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  function navigateToFirstMatch() {
     if (matches[0]) router.push(`/${matches[0].id}`);
     else setIsOpen(true);
   }
 
   return (
     <div className="relative mt-7 max-w-2xl">
-      <form role="search" onSubmit={submitSearch}>
+      <div role="search">
         <label htmlFor="home-tool-search" className="sr-only">Hesaplama aracı ara</label>
         <div className="relative">
           <Search size={20} aria-hidden="true" className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -47,14 +46,18 @@ export function HomeToolSearch({ tools }: { tools: SearchTool[] }) {
             onFocus={() => setIsOpen(true)}
             onKeyDown={(event) => {
               if (event.key === "Escape") setIsOpen(false);
+              if (event.key === "Enter") {
+                event.preventDefault();
+                navigateToFirstMatch();
+              }
             }}
             placeholder="Örn. 4'lük not, KDV, yaş hesaplama"
             autoComplete="off"
             className="hero-search-input"
           />
-          <button type="submit" className="hero-search-button">Ara</button>
+          <button type="button" className="hero-search-button" onClick={navigateToFirstMatch}>Ara</button>
         </div>
-      </form>
+      </div>
       {isOpen && query.trim().length > 0 && (
         <div id="home-tool-search-results" aria-label="Eşleşen hesaplama araçları" className="absolute inset-x-0 top-[calc(100%+0.5rem)] z-30 overflow-hidden rounded-xl border border-slate-200 bg-white p-2 text-navy shadow-card">
           {matches.length > 0 ? (

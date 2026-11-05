@@ -56,7 +56,7 @@ select {
 
 .nav-link:hover,
 .mobile-nav-link:hover {
-  color: #2878e5;
+  color: #1d63c2;
 }
 
 .mobile-nav-link {
@@ -75,7 +75,7 @@ select {
 }
 
 .eyebrow {
-  color: #2878e5;
+  color: #1d63c2;
   font-size: 0.78rem;
   font-weight: 800;
   letter-spacing: 0.1em;
@@ -132,7 +132,7 @@ select {
   top: 0.4rem;
   min-height: 2.7rem;
   border-radius: 0.625rem;
-  background: #2878e5;
+  background: #1d63c2;
   padding-inline: 1rem;
   color: #fff;
   font-size: 0.875rem;
@@ -140,7 +140,7 @@ select {
 }
 
 .hero-search-button:hover {
-  background: #1d63c2;
+  background: #174f9d;
 }
 
 .section-title {
@@ -208,8 +208,26 @@ select {
 
 .form-input:focus,
 .search-input:focus {
-  border-color: #2878e5;
+  border-color: #1d63c2;
   box-shadow: 0 0 0 3px rgb(40 120 229 / 15%);
+}
+
+.skip-link {
+  position: absolute;
+  top: 0.75rem;
+  left: -10000px;
+  z-index: 100;
+  border-radius: 0.5rem;
+  background: #fff;
+  padding: 0.75rem 1rem;
+  color: #142b4a;
+  font-weight: 700;
+}
+
+.skip-link:focus {
+  left: 0.75rem;
+  outline: 2px solid #1d63c2;
+  outline-offset: 2px;
 }
 
 .form-input::placeholder,
@@ -235,8 +253,8 @@ select {
 }
 
 .filter-chip-active {
-  border-color: #2878e5;
-  background: #2878e5;
+  border-color: #1d63c2;
+  background: #1d63c2;
   color: #fff;
 }
 
@@ -247,7 +265,7 @@ select {
   justify-content: center;
   border: 0;
   border-radius: 0.75rem;
-  background: #2878e5;
+  background: #1d63c2;
   padding: 0.7rem 1.35rem;
   color: #fff;
   font-weight: 700;
