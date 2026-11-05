@@ -32,7 +32,12 @@ export const relatedToolIds: Record<string, string[]> = {
   "doviz-hesaplama": ["yuzde-hesaplama", "basit-faiz-hesaplama", "bilesik-faiz-hesaplama"],
   "yakit-tuketimi-hesaplama": ["elektrik-faturasi-hesaplama", "litre-donusumu", "yuzde-hesaplama"],
   "elektrik-faturasi-hesaplama": ["yakit-tuketimi-hesaplama", "yuzde-hesaplama", "kredi-taksit-hesaplama"],
-  "is-gunu-hesaplama": ["iki-tarih-arasi-gun-hesaplama", "tarihe-gun-ekleme", "tarihten-gun-cikarma"]
+  "is-gunu-hesaplama": ["iki-tarih-arasi-gun-hesaplama", "tarihe-gun-ekleme", "tarihten-gun-cikarma"],
+  "pazaryeri-net-kar-hesaplama": ["kar-zarar-hesaplama", "indirim-hesaplama", "kdv-hesaplama"],
+  "birim-fiyat-karsilastirma": ["indirim-hesaplama", "yuzde-hesaplama", "kilogram-donusumu"],
+  "aylik-katkili-birikim-hesaplama": ["bilesik-faiz-hesaplama", "basit-faiz-hesaplama", "kredi-taksit-hesaplama"],
+  "yolculuk-maliyeti-hesaplama": ["yakit-tuketimi-hesaplama", "litre-donusumu", "doviz-hesaplama"],
+  "desi-hacim-hesaplama": ["metrekare-hesaplama", "litre-donusumu", "kilogram-donusumu"]
 };
 
 export function getRelatedTools(toolId: string): ToolDefinition[] {

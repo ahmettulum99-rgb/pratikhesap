@@ -8,7 +8,7 @@ import { createPageMetadata } from "../lib/seo/metadata";
 
 describe("calculator catalog", () => {
   it("includes each requested tool with a unique root URL and SEO metadata", () => {
-    expect(tools).toHaveLength(32);
+    expect(tools).toHaveLength(37);
     expect(new Set(tools.map((tool) => tool.id)).size).toBe(tools.length);
     expect(new Set(tools.map((tool) => tool.title)).size).toBe(tools.length);
     expect(new Set(tools.map((tool) => tool.metaDescription)).size).toBe(tools.length);
@@ -29,6 +29,7 @@ describe("calculator catalog", () => {
     }
     expect(tools.find((tool) => tool.id === "dortluk-not-sistemi-hesaplama")).toBeDefined();
     expect(tools.find((tool) => tool.id === "doviz-hesaplama")).toBeDefined();
+    expect(tools.filter((tool) => tool.isNew)).toContainEqual(expect.objectContaining({ id: "pazaryeri-net-kar-hesaplama" }));
   });
 
   it("builds unique canonical, Open Graph, and Twitter metadata for every calculator", () => {

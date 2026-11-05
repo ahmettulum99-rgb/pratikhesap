@@ -16,7 +16,7 @@ export default function ContactPage() {
       <article className="max-w-3xl">
         <p className="eyebrow">Bize ulaşın</p>
         <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-navy sm:text-4xl">İletişim</h1>
-        <p className="mt-5 leading-7 text-slate-600">Hesaplama araçlarıyla ilgili bir hata fark ettiyseniz veya yeni bir araç öneriniz varsa bu sayfadan ulaşabilirsiniz. İletişim kanalı henüz yapılandırılmadığı için burada doğrulanmamış bir e-posta adresi veya çalışmayan bir form yayımlamıyoruz.</p>
+        <p className="mt-5 leading-7 text-slate-600">Hesaplama araçlarıyla ilgili bir hata fark ettiyseniz, yeni bir araç önermek veya gizlilikle ilgili bir talepte bulunmak istiyorsanız <a className="font-semibold text-blue underline" href="mailto:ahmet.tulum99@gmail.com">ahmet.tulum99@gmail.com</a> adresine e-posta gönderebilirsiniz.</p>
       </article>
     </main>
   );

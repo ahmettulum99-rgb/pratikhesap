@@ -40,7 +40,12 @@ const toolKeywords: Record<string, string[]> = {
   "doviz-hesaplama": ["döviz hesaplama", "döviz çevirici", "dolar TL hesaplama", "euro TL hesaplama", "TCMB döviz kuru", "döviz TL çevirme"],
   "yakit-tuketimi-hesaplama": ["yakıt tüketimi hesaplama", "araç 100 km kaç litre yakar", "L/100 km hesaplama", "araç yakıt maliyeti"],
   "elektrik-faturasi-hesaplama": ["elektrik tüketim maliyeti", "kWh hesaplama", "elektrik birim fiyat hesaplama", "tahmini enerji bedeli"],
-  "is-gunu-hesaplama": ["iş günü hesaplama", "iki tarih arası iş günü", "hafta içi gün sayısı hesaplama", "resmî tatiller hariç iş günü"]
+  "is-gunu-hesaplama": ["iş günü hesaplama", "iki tarih arası iş günü", "hafta içi gün sayısı hesaplama", "resmî tatiller hariç iş günü"],
+  "pazaryeri-net-kar-hesaplama": ["pazaryeri komisyon sonrası kâr", "ürün net kâr hesaplama", "satış kâr marjı", "komisyon ve kargo maliyeti"],
+  "birim-fiyat-karsilastirma": ["birim fiyat hesaplama", "ürün fiyatı karşılaştırma", "paket fiyatı karşılaştır", "kg litre birim maliyet"],
+  "aylik-katkili-birikim-hesaplama": ["aylık birikim hesaplama", "düzenli yatırım getirisi", "aylık katkı hesaplayıcı", "birikim hedefi hesaplama"],
+  "yolculuk-maliyeti-hesaplama": ["yol masrafı hesaplama", "yolculuk yakıt maliyeti", "araç seyahat gideri", "kişi başı yol masrafı"],
+  "desi-hacim-hesaplama": ["desi hesaplama", "kargo hacim ağırlığı", "paket hacmi hesaplama", "desi böleni hesaplama"]
 };
 
 export function getToolKeywords(tool: ToolDefinition): string[] {

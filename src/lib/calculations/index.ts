@@ -4,6 +4,7 @@ export type CalculatorResult = {
   unit?: string;
   displayValue?: string;
   details?: string[];
+  table?: { headers: string[]; rows: string[][] };
 };
 
 export type CalculatorValues = Record<string, string>;
@@ -12,7 +13,7 @@ const requiredNumber = (values: CalculatorValues, key: string, label = key): num
   const raw = values[key]?.trim();
   if (!raw) throw new Error(`${label} alanını doldurun.`);
   const value = parseTurkishNumber(raw);
-  if (!Number.isFinite(value)) throw new Error(`${label} için geçerli bir sayı girin.`);
+  if (!Number.isFinite(value) || Math.abs(value) > 1e15) throw new Error(`${label} için geçerli ve 1.000.000.000.000.000 değerini aşmayan bir sayı girin.`);
   return value;
 };
 
@@ -57,9 +58,30 @@ const result = (label: string, value: number, unit?: string, details?: string[])
 };
 
 export function calculatePercentage(values: CalculatorValues): CalculatorResult {
-  const amount = requiredNumber(values, "amount", "Tutar");
-  const percent = requiredNumber(values, "percent", "Yüzde");
-  return result("Sonuç", amount * percent / 100, "", [`${formatTurkishNumber(amount)} tutarının %${formatTurkishNumber(percent)}'i`]);
+  const operation = values["operation"] || "of";
+  if (operation === "share") {
+    const amount = requiredNumber(values, "amount", "Sayı (A)");
+    const base = requiredNumber(values, "base", "Taban sayı (B)");
+    if (base === 0) throw new Error("Taban sayı sıfır olamaz.");
+    return result("Oran", amount / base * 100, "%", [`${formatTurkishNumber(amount)} ÷ ${formatTurkishNumber(base)} × 100`]);
+  }
+  if (operation === "change") {
+    const start = requiredNumber(values, "start", "Başlangıç değeri");
+    const end = requiredNumber(values, "end", "Bitiş değeri");
+    if (start === 0) throw new Error("Başlangıç değeri sıfır olduğunda yüzde değişim hesaplanamaz.");
+    const percent = (end - start) / Math.abs(start) * 100;
+    return result("Yüzde değişim", percent, "%", [`${percent >= 0 ? "Artış" : "Azalış"}: ${formatTurkishNumber(Math.abs(percent))}%`]);
+  }
+  const amount = requiredNumber(values, "amount", "Sayı");
+  const percent = requiredNumber(values, "percent", "Yüzde oranı");
+  if (amount < 0 || percent < 0 || percent > 100) throw new Error("Sayı negatif olamaz; yüzde oranı %0 ile %100 arasında olmalıdır.");
+  if (operation === "add" || operation === "subtract") {
+    const delta = amount * percent / 100;
+    const value = operation === "add" ? amount + delta : amount - delta;
+    return result(operation === "add" ? "Yüzde eklenmiş değer" : "Yüzde çıkarılmış değer", value, "", [`İşlem farkı: ${formatTurkishNumber(delta)}`]);
+  }
+  if (operation !== "of") throw new Error("Geçerli bir yüzde işlemi seçin.");
+  return result("Sonuç", amount * percent / 100, "", [`${formatTurkishNumber(amount)} sayısının %${formatTurkishNumber(percent)}'i`]);
 }
 
 export function calculateSalaryRaise(values: CalculatorValues): CalculatorResult {
@@ -192,10 +214,7 @@ export function calculatePregnancyWeeks(values: CalculatorValues, now = new Date
 }
 
 export function calculateGradeAverage(values: CalculatorValues): CalculatorResult {
-  const first = requiredNumber(values, "grade1", "1. not");
-  const second = requiredNumber(values, "grade2", "2. not");
-  if (first < 0 || second < 0 || first > 100 || second > 100) throw new Error("Notlar 0 ile 100 arasında olmalıdır.");
-  return result("Not ortalaması", (first + second) / 2, "puan");
+  return calculateCourseAverage({ ...values, averageMode: "equal" });
 }
 
 export function calculateExamScore(values: CalculatorValues): CalculatorResult {
@@ -205,8 +224,14 @@ export function calculateExamScore(values: CalculatorValues): CalculatorResult {
   if (![correct, wrong, total].every(Number.isSafeInteger) || correct < 0 || wrong < 0 || total <= 0 || correct + wrong > total) {
     throw new Error("Soru sayıları tam sayı olmalı ve doğru ile yanlış toplamı toplam soru sayısını aşmamalıdır.");
   }
-  const net = Math.max(0, correct - wrong / 4);
-  return result("Sınav puanı", net / total * 100, "puan", [`Net sayısı (4 yanlış 1 doğruyu götürür): ${formatTurkishNumber(net)}`]);
+  const penaltyRaw = values["wrongPenalty"] ?? "4";
+  const penalty = penaltyRaw === "custom" ? requiredNumber(values, "customPenalty", "Yanlış götürme katsayısı") : Number(penaltyRaw);
+  if (!Number.isFinite(penalty) || penalty < 0 || (penalty !== 0 && penalty > 100)) throw new Error("Yanlış götürme katsayısı 0 veya 0 ile 100 arasında olmalıdır.");
+  const net = correct - (penalty === 0 ? 0 : wrong / penalty);
+  return result("Net", net, "net", [
+    `Basit net / toplam soru oranı: ${formatTurkishNumber(net / total * 100)}%. Bu oran resmî sınav puanı değildir.`,
+    penalty === 0 ? "Yanlış cevaplar netten düşülmedi." : `Her ${formatTurkishNumber(penalty)} yanlış 1 doğruyu götürür.`
+  ]);
 }
 
 export function calculateSuccessPercentage(values: CalculatorValues): CalculatorResult {
@@ -229,9 +254,26 @@ export function calculateLetterGrade(values: CalculatorValues): CalculatorResult
 }
 
 export function calculateCourseAverage(values: CalculatorValues): CalculatorResult {
-  const grades = [1, 2, 3].map((number) => requiredNumber(values, `grade${number}`, `${number}. ders notu`));
-  if (grades.some((grade) => grade < 0 || grade > 100)) throw new Error("Ders notları 0 ile 100 arasında olmalıdır.");
-  return result("Ders ortalaması", grades.reduce((sum, grade) => sum + grade, 0) / grades.length, "puan");
+  const count = Math.min(30, Math.max(1, Number(values["_rowCount"] ?? 3)));
+  const rows: { name: string; grade: number; credit: number }[] = [];
+  for (let number = 1; number <= count; number++) {
+    const rawGrade = values[`grade${number}`]?.trim() ?? "";
+    const name = values[`courseName${number}`]?.trim() || `${number}. ders`;
+    const rawCredit = values[`credit${number}`]?.trim() ?? "";
+    if (!rawGrade && !rawCredit) continue;
+    if (!rawGrade) throw new Error(`${name}: not alanını doldurun.`);
+    const grade = parseTurkishNumber(rawGrade);
+    if (!Number.isFinite(grade) || grade < 0 || grade > 100) throw new Error(`${name}: not 0 ile 100 arasında olmalıdır.`);
+    const credit = values["averageMode"] === "weighted" ? parseTurkishNumber(rawCredit) : 1;
+    if (values["averageMode"] === "weighted" && (!Number.isFinite(credit) || credit <= 0)) throw new Error(`${name}: ağırlık sıfırdan büyük olmalıdır.`);
+    rows.push({ name, grade, credit });
+  }
+  if (!rows.length) throw new Error("En az bir geçerli not girin.");
+  const credits = rows.reduce((sum, row) => sum + row.credit, 0);
+  const average = rows.reduce((sum, row) => sum + row.grade * row.credit, 0) / credits;
+  return result("Ders ortalaması", average, "puan", [
+    `${rows.length} ders üzerinden ${values["averageMode"] === "weighted" ? "girilen kredi/ders saati ağırlıklarıyla" : "eşit ağırlıkla"} hesaplandı.`
+  ]);
 }
 
 export function calculateSquareMeters(values: CalculatorValues): CalculatorResult {
@@ -288,8 +330,9 @@ export function calculateFourPointGpa(values: CalculatorValues): CalculatorResul
   let weightedPoints = 0;
   let totalCredits = 0;
   let courseCount = 0;
+  const count = Math.min(30, Math.max(1, Number(values["_rowCount"] ?? 5)));
 
-  for (let course = 1; course <= 5; course++) {
+  for (let course = 1; course <= count; course++) {
     const grade = values[`grade${course}`]?.trim() ?? "";
     const rawCredit = values[`credit${course}`]?.trim() ?? "";
     if (!grade && !rawCredit) continue;
@@ -303,8 +346,23 @@ export function calculateFourPointGpa(values: CalculatorValues): CalculatorResul
   }
 
   if (courseCount === 0) throw new Error("En az bir dersin harf notunu ve kredisini girin.");
-  return result("4'lük sistemde ağırlıklı not ortalaması", weightedPoints / totalCredits, " / 4,00", [
-    `${courseCount} ders ve ${formatTurkishNumber(totalCredits)} toplam kredi üzerinden hesaplandı.`,
+  const previousCreditsRaw = values["previousCredits"]?.trim() ?? "";
+  const previousGpaRaw = values["previousGpa"]?.trim() ?? "";
+  if (Boolean(previousCreditsRaw) !== Boolean(previousGpaRaw)) throw new Error("Kümülatif ortalama için önceki toplam kredi ve ortalamayı birlikte girin.");
+  let average = weightedPoints / totalCredits;
+  let cumulativeDetail = "";
+  if (previousCreditsRaw && previousGpaRaw) {
+    const previousCredits = parseTurkishNumber(previousCreditsRaw);
+    const previousGpa = parseTurkishNumber(previousGpaRaw);
+    if (!Number.isFinite(previousCredits) || previousCredits <= 0 || !Number.isFinite(previousGpa) || previousGpa < 0 || previousGpa > 4) {
+      throw new Error("Önceki kredi pozitif, önceki ortalama 0 ile 4 arasında olmalıdır.");
+    }
+    average = (weightedPoints + previousCredits * previousGpa) / (totalCredits + previousCredits);
+    cumulativeDetail = `Önceki kayıtlarla birlikte toplam ${formatTurkishNumber(totalCredits + previousCredits)} kredi üzerinden kümülatif sonuç.`;
+  }
+  return result(previousCreditsRaw ? "Kümülatif 4'lük genel ortalama" : "4'lük sistemde ağırlıklı not ortalaması", average, " / 4,00", [
+    `${courseCount} yeni ders ve ${formatTurkishNumber(totalCredits)} yeni kredi üzerinden hesaplandı.`,
+    ...(cumulativeDetail ? [cumulativeDetail] : []),
     "AA=4,00; BA=3,50; BB=3,00; CB=2,50; CC=2,00; DC=1,50; DD=1,00; FD=0,50; FF=0,00. Üniversitenizin katsayı tablosu farklı olabilir."
   ]);
 }
@@ -312,16 +370,25 @@ export function calculateFourPointGpa(values: CalculatorValues): CalculatorResul
 export function calculateWeightedGrade(values: CalculatorValues): CalculatorResult {
   let weightedTotal = 0;
   let totalWeight = 0;
-  for (let exam = 1; exam <= 3; exam++) {
-    const score = requiredNumber(values, `score${exam}`, `${exam}. sınav notu`);
-    const weight = requiredNumber(values, `weight${exam}`, `${exam}. sınav ağırlığı`);
+  const count = Math.min(30, Math.max(1, Number(values["_rowCount"] ?? 3)));
+  let assessmentCount = 0;
+  for (let exam = 1; exam <= count; exam++) {
+    const rawScore = values[`score${exam}`]?.trim() ?? "";
+    const rawWeight = values[`weight${exam}`]?.trim() ?? "";
+    const name = values[`assessmentName${exam}`]?.trim() || `${exam}. değerlendirme`;
+    if (!rawScore && !rawWeight) continue;
+    if (!rawScore || !rawWeight) throw new Error(`${name}: not ve ağırlığı birlikte girin.`);
+    const score = requiredNumber(values, `score${exam}`, `${name} notu`);
+    const weight = requiredNumber(values, `weight${exam}`, `${name} ağırlığı`);
     if (score < 0 || score > 100) throw new Error("Sınav notları 0 ile 100 arasında olmalıdır.");
     if (weight < 0 || weight > 100) throw new Error("Sınav ağırlıkları %0 ile %100 arasında olmalıdır.");
     weightedTotal += score * weight;
     totalWeight += weight;
+    assessmentCount++;
   }
+  if (!assessmentCount) throw new Error("En az bir değerlendirme notu ve ağırlığı girin.");
   if (Math.abs(totalWeight - 100) > 0.001) throw new Error(`Sınav ağırlıklarının toplamı %100 olmalıdır. Şu anki toplam: %${formatTurkishNumber(totalWeight)}.`);
-  return result("Ağırlıklı not ortalaması", weightedTotal / 100, "puan");
+  return result("Ağırlıklı not ortalaması", weightedTotal / 100, "puan", [`${assessmentCount} değerlendirme; toplam ağırlık %${formatTurkishNumber(totalWeight)}.`]);
 }
 
 export function calculateRequiredFinalGrade(values: CalculatorValues): CalculatorResult {
@@ -356,18 +423,51 @@ export function calculateLoanInstallment(values: CalculatorValues): CalculatorRe
   const principal = requiredNumber(values, "principal", "Kredi tutarı");
   const monthlyRate = requiredNumber(values, "monthlyRate", "Aylık faiz oranı");
   const months = requiredNumber(values, "months", "Vade");
-  if (principal <= 0 || monthlyRate < 0 || !Number.isSafeInteger(months) || months <= 0) {
-    throw new Error("Kredi tutarı ve vade pozitif olmalı; faiz oranı negatif olmamalıdır.");
+  if (principal <= 0 || monthlyRate < 0 || !Number.isSafeInteger(months) || months <= 0 || months > 1200) {
+    throw new Error("Kredi tutarı ve faiz oranı geçerli olmalı; vade 1–1.200 tam ay arasında olmalıdır.");
   }
+  const fee = values["fee"]?.trim() ? requiredNumber(values, "fee", "Aylık diğer gider") : 0;
+  if (fee < 0) throw new Error("Aylık diğer gider negatif olamaz.");
   const rate = monthlyRate / 100;
-  const installment = rate === 0
+  const baseInstallment = rate === 0
     ? principal / months
     : principal * rate * (1 + rate) ** months / ((1 + rate) ** months - 1);
-  const totalRepayment = installment * months;
-  return result("Tahmini aylık taksit", installment, "₺", [
-    `Toplam geri ödeme: ${formatTurkishNumber(totalRepayment)} ₺`,
-    `Toplam faiz: ${formatTurkishNumber(totalRepayment - principal)} ₺. Vergi, sigorta, tahsis ücreti ve diğer masraflar dahil değildir.`
-  ]);
+  const payment = Math.round(baseInstallment * 100) / 100;
+  let balance = Math.round(principal * 100) / 100;
+  let interestTotal = 0;
+  let principalTotal = 0;
+  const rows: string[][] = [];
+  for (let month = 1; month <= months; month++) {
+    const interest = Math.round(balance * rate * 100) / 100;
+    const principalPaid = month === months
+      ? balance
+      : Math.min(balance, Math.round((payment - interest) * 100) / 100);
+    const installment = Math.round((interest + principalPaid) * 100) / 100;
+    balance = Math.max(0, Math.round((balance - principalPaid) * 100) / 100);
+    interestTotal += interest;
+    principalTotal += principalPaid;
+    rows.push([
+      String(month),
+      `${formatTurkishNumber(installment)} ₺`,
+      `${formatTurkishNumber(interest)} ₺`,
+      `${formatTurkishNumber(principalPaid)} ₺`,
+      `${formatTurkishNumber(balance)} ₺`
+    ]);
+  }
+  const totalRepayment = principalTotal + interestTotal + fee * months;
+  return {
+    label: "Tahmini aylık taksit",
+    value: payment + fee,
+    unit: "₺",
+    details: [
+      `Temel aylık taksit: ${formatTurkishNumber(payment)} ₺; aylık ek gider: ${formatTurkishNumber(fee)} ₺; toplam geri ödeme: ${formatTurkishNumber(totalRepayment)} ₺.`,
+      `Toplam faiz: ${formatTurkishNumber(interestTotal)} ₺. Vergi, sigorta, tahsis ücreti ve banka koşulları dahil değildir. Son taksit kuruş yuvarlamasına göre ayarlanmıştır.`
+    ],
+    table: {
+      headers: ["Ay", "Taksit", "Faiz", "Anapara", "Kalan borç"],
+      rows
+    }
+  };
 }
 
 export function calculateCompoundInterest(values: CalculatorValues): CalculatorResult {
@@ -409,10 +509,14 @@ export function calculateCurrencyConversion(values: CalculatorValues): Calculato
   if (amount < 0 || rate <= 0 || !Number.isSafeInteger(unit) || unit <= 0) {
     throw new Error("Döviz tutarı negatif olamaz; kur ve kur birimi geçerli olmalıdır.");
   }
-  const converted = amount * rate / unit;
-  return result("Yaklaşık Türk lirası karşılığı", converted, "₺", [
+  const direction = values["direction"] || "to-try";
+  if (direction !== "to-try" && direction !== "from-try") throw new Error("Geçerli bir dönüşüm yönü seçin.");
+  const converted = direction === "to-try" ? amount * rate / unit : amount * unit / rate;
+  return result(direction === "to-try" ? "Yaklaşık Türk lirası karşılığı" : `Yaklaşık ${currency} karşılığı`, converted, direction === "to-try" ? "₺" : currency, [
     `TCMB ${values["rateDate"] || "güncel"} tarihli ${currency} ForexSelling kuru: ${formatTurkishNumber(rate)} ₺ / ${unit} ${currency}.`,
-    "Bu gösterge niteliğindeki TCMB satış kurudur; banka, ödeme kuruluşu veya döviz bürosu kuru ve işlem masrafları farklı olabilir."
+    direction === "to-try"
+      ? "Bu gösterge niteliğindeki TCMB satış kurudur; banka, ödeme kuruluşu veya döviz bürosu kuru ve işlem masrafları farklı olabilir."
+      : "TL tutarı aynı gösterge satış kuruna bölünerek yaklaşık döviz karşılığı hesaplandı; bu işlem bankanın alış kuru veya piyasa işlem tutarı değildir."
   ]);
 }
 
@@ -429,11 +533,19 @@ export function calculateFuelConsumption(values: CalculatorValues): CalculatorRe
 }
 
 export function calculateElectricityCost(values: CalculatorValues): CalculatorResult {
-  const usage = requiredNumber(values, "usage", "Elektrik tüketimi");
+  const deviceMode = values["mode"] === "device";
+  const usage = deviceMode
+    ? requiredNumber(values, "watts", "Cihaz gücü") / 1000
+      * requiredNumber(values, "hoursPerDay", "Günlük kullanım")
+      * requiredNumber(values, "days", "Gün sayısı")
+    : requiredNumber(values, "usage", "Elektrik tüketimi");
   const unitPrice = requiredNumber(values, "unitPrice", "Birim fiyat");
-  if (usage < 0 || unitPrice < 0) throw new Error("Tüketim ve birim fiyat negatif olamaz.");
+  if (usage < 0 || unitPrice < 0 || (deviceMode && (requiredNumber(values, "watts", "Cihaz gücü") <= 0 || requiredNumber(values, "hoursPerDay", "Günlük kullanım") > 24 || requiredNumber(values, "days", "Gün sayısı") <= 0))) {
+    throw new Error("Tüketim ve birim fiyat negatif olamaz; günlük cihaz kullanımı 0 ile 24 saat arasında, gün sayısı pozitif olmalıdır.");
+  }
   return result("Tahmini enerji bedeli", usage * unitPrice, "₺", [
     `${formatTurkishNumber(usage)} kWh × ${formatTurkishNumber(unitPrice)} ₺/kWh`,
+    ...(deviceMode ? [`Cihaz tüketimi: güç × günlük saat × gün = ${formatTurkishNumber(usage)} kWh.`] : []),
     "Vergi, dağıtım bedeli, kademe, fon ve diğer tarife kalemleri dahil değildir; fatura tutarı farklı olabilir."
   ]);
 }
@@ -441,18 +553,203 @@ export function calculateElectricityCost(values: CalculatorValues): CalculatorRe
 export function calculateBusinessDays(values: CalculatorValues): CalculatorResult {
   const start = dateValue(values, "startDate", "Başlangıç tarihi");
   const end = dateValue(values, "endDate", "Bitiş tarihi");
-  const firstDay = start < end ? start : end;
-  const lastDay = start < end ? end : start;
-  const dayCount = (lastDay.getTime() - firstDay.getTime()) / 86_400_000;
-  const fullWeeks = Math.floor(dayCount / 7);
-  const remainingDays = dayCount % 7;
-  let count = fullWeeks * 5;
-  for (let offset = 1; offset <= remainingDays; offset++) {
-    const weekday = (firstDay.getUTCDay() + offset) % 7;
-    if (weekday !== 0 && weekday !== 6) count++;
+  if (start > end) throw new Error("Başlangıç tarihi bitiş tarihinden sonra olamaz.");
+  const includeStart = values["includeStart"] === "yes";
+  const includeEnd = values["includeEnd"] !== "no";
+  const saturday = values["saturday"] === "yes";
+  const holidays = new Set((values["holidays"] ?? "").split(/[,\s]+/).filter(Boolean).map((value) => {
+    parseDate(value, "Tatil tarihi");
+    return value;
+  }));
+  let count = 0;
+  for (let date = new Date(start); date <= end; date.setUTCDate(date.getUTCDate() + 1)) {
+    const isStart = date.getTime() === start.getTime();
+    const isEnd = date.getTime() === end.getTime();
+    if ((isStart && !includeStart) || (isEnd && !includeEnd)) continue;
+    const weekday = date.getUTCDay();
+    if ((weekday !== 0 && (weekday !== 6 || saturday)) && !holidays.has(date.toISOString().slice(0, 10))) count++;
   }
   return result("İş günü farkı", count, "iş günü", [
-    "Başlangıç tarihi sayılmaz; bitiş tarihi sayılır. Resmî ve yerel tatiller hesaba katılmaz."
+    `Başlangıç ${includeStart ? "dahil" : "hariç"}, bitiş ${includeEnd ? "dahil" : "hariç"}; cumartesi ${saturday ? "iş günü" : "hariç"}.`,
+    holidays.size ? `${holidays.size} kullanıcı tanımlı tam gün tatil çıkarıldı.` : "Resmî tatiller otomatik tanınmaz. Yarım gün tatilleri ayrıca hesaplanmaz."
+  ]);
+}
+
+export function calculateMarketplaceProfit(values: CalculatorValues): CalculatorResult {
+  const salePrice = requiredNumber(values, "salePrice", "Liste satış fiyatı");
+  const productCost = requiredNumber(values, "productCost", "Ürün maliyeti");
+  const discount = requiredNumber(values, "discountPercent", "İndirim oranı");
+  const commissionRate = requiredNumber(values, "commissionRate", "Komisyon oranı");
+  const shipping = requiredNumber(values, "shipping", "Kargo gideri");
+  const extraExpenses = requiredNumber(values, "extraExpenses", "Diğer giderler");
+  if ([salePrice, productCost, shipping, extraExpenses].some((value) => value < 0)
+    || discount < 0 || discount > 100 || commissionRate < 0 || commissionRate > 100) {
+    throw new Error("Fiyat ve giderler negatif olamaz; indirim ve komisyon oranları %0–%100 arasında olmalıdır.");
+  }
+  const discountedPrice = salePrice * (1 - discount / 100);
+  const commissionBasis = values["commissionBasis"] === "list" ? salePrice : discountedPrice;
+  const commission = commissionBasis * commissionRate / 100;
+  const profit = discountedPrice - productCost - commission - shipping - extraExpenses;
+  const details = [
+    `İndirim sonrası satış: ${formatTurkishNumber(discountedPrice)} ₺; komisyon: ${formatTurkishNumber(commission)} ₺ (${values["commissionBasis"] === "list" ? "liste fiyatı" : "indirimli fiyat"} üzerinden).`,
+    `Satış fiyatına göre kâr marjı: ${discountedPrice === 0 ? "hesaplanamaz (satış tutarı sıfır)" : `%${formatTurkishNumber(profit / discountedPrice * 100)}`}.`,
+    `Ürün maliyetine göre kâr oranı: ${productCost === 0 ? "hesaplanamaz (ürün maliyeti sıfır)" : `%${formatTurkishNumber(profit / productCost * 100)}`}.`,
+    "Vergi, iade, reklam ve platform kesintileri yalnızca yukarıdaki giderlere girildiyse dahildir."
+  ];
+  return result("Girilen giderlere göre tahmini kâr", profit, "₺", details);
+}
+
+export function calculateUnitPriceComparison(values: CalculatorValues): CalculatorResult {
+  const count = Math.min(30, Math.max(2, Number(values["_rowCount"] ?? 2)));
+  const units: Record<string, { group: string; factor: number; display: string }> = {
+    kg: { group: "mass", factor: 1000, display: "g" },
+    g: { group: "mass", factor: 1, display: "g" },
+    l: { group: "volume", factor: 1000, display: "ml" },
+    ml: { group: "volume", factor: 1, display: "ml" },
+    adet: { group: "count", factor: 1, display: "adet" },
+    m: { group: "length", factor: 100, display: "cm" },
+    cm: { group: "length", factor: 1, display: "cm" }
+  };
+  const products: { name: string; price: number; unitPrice: number; displayUnit: string; group: string }[] = [];
+  for (let index = 1; index <= count; index++) {
+    const rawPrice = values[`price${index}`]?.trim() ?? "";
+    const rawQuantity = values[`quantity${index}`]?.trim() ?? "";
+    const name = values[`productName${index}`]?.trim() || `${index}. ürün`;
+    if (!rawPrice && !rawQuantity) continue;
+    if (!rawPrice || !rawQuantity) throw new Error(`${name}: fiyat ve miktarı birlikte girin.`);
+    const price = requiredNumber(values, `price${index}`, `${name} fiyatı`);
+    const quantity = requiredNumber(values, `quantity${index}`, `${name} miktarı`);
+    const packages = values[`packages${index}`]?.trim() ? requiredNumber(values, `packages${index}`, `${name} paket adedi`) : 1;
+    const unit = units[values[`unit${index}`] || "kg"];
+    if (price < 0 || quantity <= 0 || packages <= 0 || !Number.isSafeInteger(packages) || !unit) {
+      throw new Error(`${name}: fiyat negatif olamaz; miktar ve tam paket adedi pozitif, birim geçerli olmalıdır.`);
+    }
+    products.push({ name, price, unitPrice: price / (quantity * packages * unit.factor), displayUnit: unit.display, group: unit.group });
+  }
+  if (products.length < 2) throw new Error("En az iki ürünün fiyat ve miktarını girin.");
+  if (products.some((product) => product.group !== products[0].group)) {
+    throw new Error("Karşılaştırılan ürünlerin miktar birimleri aynı türde olmalıdır.");
+  }
+  const ranked = [...products].sort((a, b) => a.unitPrice - b.unitPrice);
+  const winner = ranked[0];
+  const details = [
+    `En ekonomik seçenek: ${winner.name}, ${formatTurkishNumber(winner.unitPrice)} ₺/${winner.displayUnit}.`,
+    ...(ranked[1] ? [`Bir sonraki seçeneğe göre fark: ${formatTurkishNumber(ranked[1].unitPrice - winner.unitPrice)} ₺/${winner.displayUnit}.`] : [])
+  ];
+  return {
+    label: "En düşük birim fiyat",
+    value: winner.unitPrice,
+    unit: `₺/${winner.displayUnit}`,
+    details,
+    table: {
+      headers: ["Ürün", `Birim fiyat (₺/${winner.displayUnit})`],
+      rows: ranked.map((item) => [item.name, formatTurkishNumber(item.unitPrice)])
+    }
+  };
+}
+
+export function calculateMonthlySavings(values: CalculatorValues): CalculatorResult {
+  const principal = requiredNumber(values, "principal", "Başlangıç tutarı");
+  const contribution = requiredNumber(values, "contribution", "Aylık katkı");
+  const annualRate = requiredNumber(values, "annualRate", "Varsayımsal yıllık oran");
+  const months = requiredNumber(values, "months", "Süre");
+  const targetRaw = values["target"]?.trim() ?? "";
+  const target = targetRaw ? parseTurkishNumber(targetRaw) : undefined;
+  if (principal < 0 || contribution < 0 || annualRate < 0 || !Number.isSafeInteger(months) || months < 1 || months > 1200
+    || (target !== undefined && (!Number.isFinite(target) || target <= 0))) {
+    throw new Error("Tutarlar ve oran negatif olamaz; süre 1–1.200 tam ay, hedef tutar ise pozitif olmalıdır.");
+  }
+  const monthlyRate = annualRate / 1200;
+  const beginning = values["timing"] === "beginning";
+  let balance = principal;
+  let totalContributions = principal;
+  const rows: string[][] = [];
+  for (let month = 1; month <= months; month++) {
+    if (beginning) balance += contribution;
+    balance *= 1 + monthlyRate;
+    if (!beginning) balance += contribution;
+    totalContributions += contribution;
+    if (month % 12 === 0 || month === months) {
+      rows.push([
+        String(month),
+        `${formatTurkishNumber(totalContributions)} ₺`,
+        `${formatTurkishNumber(balance)} ₺`,
+        `${formatTurkishNumber(balance - totalContributions)} ₺`
+      ]);
+    }
+  }
+  let targetMonths: number | null = target !== undefined && principal >= target ? 0 : null;
+  if (target !== undefined && targetMonths === null) {
+    let targetBalance = principal;
+    for (let month = 1; month <= 1200; month++) {
+      if (beginning) targetBalance += contribution;
+      targetBalance *= 1 + monthlyRate;
+      if (!beginning) targetBalance += contribution;
+      if (!Number.isFinite(targetBalance)) break;
+      if (targetBalance >= target) {
+        targetMonths = month;
+        break;
+      }
+    }
+  }
+  if (!Number.isFinite(balance)) throw new Error("Bu tutar ve oranla dönem sonu tutarı hesaplanamıyor.");
+  return {
+    label: "Varsayımsal dönem sonu tutarı",
+    value: balance,
+    unit: "₺",
+    details: [
+      `Toplam başlangıç ve katkı: ${formatTurkishNumber(totalContributions)} ₺; varsayımsal getiri: ${formatTurkishNumber(balance - totalContributions)} ₺.`,
+      target === undefined
+        ? "Hedef tutar girmediğiniz için hedefe ulaşma süresi hesaplanmadı."
+        : targetMonths === null
+          ? "Bu katkı ve oranla 1.200 ay içinde hedefe ulaşılamıyor."
+          : `Hedefe ulaşma tahmini: ${targetMonths === 0 ? "başlangıçta" : `${targetMonths} ay içinde`}.`,
+      "Oran sabit ve varsayımsal kabul edilir; getiri garanti değildir ve vergi, ücret, enflasyon veya piyasa değişimleri hesaba katılmaz."
+    ],
+    table: {
+      headers: ["Ay", "Toplam katkı", "Tahmini bakiye", "Varsayımsal getiri"],
+      rows
+    }
+  };
+}
+
+export function calculateTripCost(values: CalculatorValues): CalculatorResult {
+  const distance = requiredNumber(values, "distance", "Tek yön mesafe");
+  const consumption = requiredNumber(values, "consumption", "Araç tüketimi");
+  const fuelPrice = requiredNumber(values, "fuelPrice", "Yakıt fiyatı");
+  const otherCosts = requiredNumber(values, "otherCosts", "Diğer giderler");
+  const people = requiredNumber(values, "people", "Yolcu sayısı");
+  if (distance <= 0 || consumption < 0 || fuelPrice < 0 || otherCosts < 0 || !Number.isSafeInteger(people) || people <= 0) {
+    throw new Error("Mesafe ve yolcu sayısı pozitif olmalı; tüketim ve fiyatlar negatif olmamalıdır.");
+  }
+  const multiplier = values["journey"] === "round-trip" ? 2 : 1;
+  const fuelCost = distance * multiplier * consumption / 100 * fuelPrice;
+  const total = fuelCost + otherCosts;
+  return result("Tahmini toplam yolculuk maliyeti", total, "₺", [
+    `Hesaplanan mesafe: ${formatTurkishNumber(distance * multiplier)} km; yakıt gideri: ${formatTurkishNumber(fuelCost)} ₺.`,
+    `Kişi başı: ${formatTurkishNumber(total / people)} ₺ (${people} kişi). Mesafe ve fiyatlar sizin girişlerinize dayanır.`
+  ]);
+}
+
+export function calculateDimensionalWeight(values: CalculatorValues): CalculatorResult {
+  const width = requiredNumber(values, "width", "En");
+  const length = requiredNumber(values, "length", "Boy");
+  const height = requiredNumber(values, "height", "Yükseklik");
+  const divisor = requiredNumber(values, "divisor", "Desi böleni");
+  const unit = values["sizeUnit"];
+  const factor = unit === "mm" ? 0.1 : unit === "m" ? 100 : unit === "cm" ? 1 : Number.NaN;
+  const actualRaw = values["actualWeight"]?.trim() ?? "";
+  const actualWeight = actualRaw ? parseTurkishNumber(actualRaw) : undefined;
+  if (width <= 0 || length <= 0 || height <= 0 || divisor <= 0 || !Number.isFinite(factor)
+    || (actualWeight !== undefined && (!Number.isFinite(actualWeight) || actualWeight < 0))) {
+    throw new Error("Ölçüler ve desi böleni pozitif olmalı; birim geçerli, gerçek ağırlık ise sıfır veya daha büyük olmalıdır.");
+  }
+  const volume = width * factor * length * factor * height * factor;
+  const volumetricWeight = volume / divisor;
+  return result("Hacim ağırlığı", volumetricWeight, "kg", [
+    `Paket hacmi: ${formatTurkishNumber(volume)} cm³; kullanılan desi böleni: ${formatTurkishNumber(divisor)}.`,
+    actualWeight === undefined ? "Gerçek ağırlık girilmedi." : `Gerçek ağırlık: ${formatTurkishNumber(actualWeight)} kg; büyük değer: ${formatTurkishNumber(Math.max(actualWeight, volumetricWeight))} kg.`,
+    "Taşıyıcıların bölen ve ücretlendirme kuralları farklı olabilir; sonuç gönderi ücreti değildir."
   ]);
 }
 
@@ -490,7 +787,12 @@ const calculators: Record<string, Calculator> = {
   "doviz-hesaplama": calculateCurrencyConversion,
   "yakit-tuketimi-hesaplama": calculateFuelConsumption,
   "elektrik-faturasi-hesaplama": calculateElectricityCost,
-  "is-gunu-hesaplama": calculateBusinessDays
+  "is-gunu-hesaplama": calculateBusinessDays,
+  "pazaryeri-net-kar-hesaplama": calculateMarketplaceProfit,
+  "birim-fiyat-karsilastirma": calculateUnitPriceComparison,
+  "aylik-katkili-birikim-hesaplama": calculateMonthlySavings,
+  "yolculuk-maliyeti-hesaplama": calculateTripCost,
+  "desi-hacim-hesaplama": calculateDimensionalWeight
 };
 
 export function calculate(toolId: string, values: CalculatorValues, now = new Date()): CalculatorResult {

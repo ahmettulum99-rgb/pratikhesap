@@ -35,9 +35,26 @@ export default async function CalculatorPage({ params }: { params: Promise<{ slu
   if (!tool) notFound();
   const category = getCategory(tool.category)!;
   const relatedTools = getRelatedTools(tool.id);
-  const inputNames = tool.fields.map((field) => field.label);
+  const fieldLabels = tool.fields.filter((field) => !field.showWhen).map((field) => field.label);
+  const inputInstructions: Record<string, string> = {
+    percentage: "Önce işlem türünü seçin; form yalnızca o işleme gereken sayıları gösterir.",
+    "grade-list": "Bir veya daha fazla not girin. Boş bırakılan satırlar ortalamaya katılmaz.",
+    "course-list": "Her ders için not girin; ağırlıklı seçenekte ders kredisi veya saatini de girmeniz gerekir.",
+    "weighted-list": "Her değerlendirme için not ve ağırlık girin; ağırlıkların toplamı %100 olmalıdır.",
+    "gpa-list": "Her dersin harf notunu ve kredisini girin. İsterseniz önceki kredi ve ortalamanızı birlikte ekleyin.",
+    "exam-net": "Doğru, yanlış ve toplam soru sayısını; gerekiyorsa yanlış götürme katsayısını belirtin.",
+    "loan-plan": "Kredi tutarı, aylık faiz oranı, vade ve varsa aylık gideri girin. Sonuç tahminidir.",
+    currency: "Dönüşüm yönünü ve para birimini seçin; tutarı girin. Kur isteği seçilen para birimiyle yapılır.",
+    electricity: "Tüketim veya cihaz hesabını seçin; yalnızca seçiminize karşılık gelen alanları doldurun.",
+    "marketplace-profit": "Satış fiyatı, ürün maliyeti, indirim, komisyon ve giderleri girin; komisyon matrahını seçin.",
+    "unit-price": "Her ürün için fiyat, miktar ve birim girin. Yalnızca aynı tür ölçüler karşılaştırılabilir.",
+    "monthly-savings": "Başlangıç tutarı, aylık katkı ve varsayımsal oranı girin; süreyi ay olarak belirtin.",
+    "trip-cost": "Tek yön mesafesi, tüketim, yakıt fiyatı ve kişi sayısını girin; gidiş-dönüşü ayrıca seçin.",
+    "dimensional-weight": "Paket ölçülerini, ölçü birimini ve taşıyıcınızın kullandığı desi bölenini girin."
+  };
+  const inputDescription = inputInstructions[tool.mode ?? ""] ?? `${fieldLabels.join(", ")} alanlarını doldurun.`;
   const faqs = [
-    { question: `${tool.name} için hangi bilgileri girmeliyim?`, answer: `Bu formda ${inputNames.join(", ")} alanlarını doldurun. Ondalık sayılarda virgül, binlik ayırmada Türkçe sayı biçimini kullanabilirsiniz.` },
+    { question: `${tool.name} için hangi bilgileri girmeliyim?`, answer: `${inputDescription} Ondalık sayılarda virgül, binlik ayırmada Türkçe sayı biçimini kullanabilirsiniz.` },
     { question: `${tool.name} sonucu hangi formüle dayanır?`, answer: `${tool.formula} Örnek: ${tool.example}` }
   ];
 
@@ -52,13 +69,13 @@ export default async function CalculatorPage({ params }: { params: Promise<{ slu
             <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-navy sm:text-4xl">{tool.name}</h1>
             <p className="mt-3 max-w-3xl leading-7 text-slate-600">{tool.intro}</p>
           </header>
-          <CalculatorForm tool={{ id: tool.id, fields: tool.fields }} />
+          <CalculatorForm tool={{ id: tool.id, fields: tool.fields, mode: tool.mode }} />
           <AdSlot placement="calculator" className="mt-6" />
           <section className="content-section">
             <h2 className="section-title">Bu araç nasıl kullanılır?</h2>
             <ol className="mt-3 list-decimal space-y-2 pl-5 leading-7 text-slate-600">
               <li>{tool.intro}</li>
-              <li>{inputNames.join(", ")} alanlarına hesaplamak istediğiniz değerleri girin; seçim alanı varsa uygun seçeneği belirleyin.</li>
+              <li>{inputDescription}</li>
               <li>Hesapla düğmesine basın. Sonuç ve varsa ek açıklamalar formun altında görünür.</li>
             </ol>
           </section>

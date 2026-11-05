@@ -15,19 +15,19 @@ const calculatorSamples = {
   "tarihten-gun-cikarma": { date: "2025-01-02", days: "1" },
   "dogum-gunune-kalan-sure": { birthDate: "2000-01-01" },
   "gebelik-haftasi-hesaplama": { lastPeriod: "2024-01-01" },
-  "not-ortalamasi-hesaplama": { grade1: "70", grade2: "80" },
-  "sinav-puani-hesaplama": { correct: "7", wrong: "1", total: "10" },
+  "not-ortalamasi-hesaplama": { grade1: "70", grade2: "80", grade3: "90" },
+  "sinav-puani-hesaplama": { correct: "7", wrong: "1", total: "10", wrongPenalty: "4" },
   "basari-yuzdesi-hesaplama": { achieved: "5", total: "10" },
   "harf-notu-hesaplama": { grade: "70" },
-  "ders-ortalamasi-hesaplama": { grade1: "70", grade2: "80", grade3: "90" },
+  "ders-ortalamasi-hesaplama": { averageMode: "equal", courseName1: "A", grade1: "70", courseName2: "B", grade2: "80", courseName3: "C", grade3: "90" },
   "metrekare-hesaplama": { width: "2", length: "3" },
   "boy-kilo-orani-hesaplama": { height: "170", weight: "65" },
   "litre-donusumu": { amount: "1", conversion: "ml-to-l" },
   "kilogram-donusumu": { amount: "1", conversion: "kg-to-g" },
   "saat-dakika-donusturme": { amount: "1", conversion: "hours-to-minutes" },
-  "dortluk-not-sistemi-hesaplama": { grade1: "AA", credit1: "1" },
+  "dortluk-not-sistemi-hesaplama": { courseName1: "A", grade1: "AA", credit1: "1" },
   "agirlikli-not-ortalamasi-hesaplama": {
-    score1: "70", weight1: "40", score2: "80", weight2: "50", score3: "90", weight3: "10"
+    assessmentName1: "Vize", score1: "70", weight1: "40", assessmentName2: "Final", score2: "80", weight2: "50", assessmentName3: "Ödev", score3: "90", weight3: "10"
   },
   "finalde-gerekli-not-hesaplama": { currentGrade: "60", targetGrade: "70", finalWeight: "60" },
   "kredi-taksit-hesaplama": { principal: "1000", monthlyRate: "0", months: "10" },
@@ -35,8 +35,13 @@ const calculatorSamples = {
   "basit-faiz-hesaplama": { principal: "1000", annualRate: "10", days: "30" },
   "doviz-hesaplama": { amount: "100", currency: "JPY", exchangeRate: "20", exchangeUnit: "100" },
   "yakit-tuketimi-hesaplama": { distance: "100", fuel: "7", price: "40" },
-  "elektrik-faturasi-hesaplama": { usage: "100", unitPrice: "2" },
-  "is-gunu-hesaplama": { startDate: "2025-01-06", endDate: "2025-01-07" }
+  "elektrik-faturasi-hesaplama": { mode: "consumption", usage: "100", unitPrice: "2" },
+  "is-gunu-hesaplama": { startDate: "2025-01-06", endDate: "2025-01-07" },
+  "pazaryeri-net-kar-hesaplama": { salePrice: "1000", productCost: "500", discountPercent: "0", commissionRate: "10", commissionBasis: "discounted", shipping: "50", extraExpenses: "20" },
+  "birim-fiyat-karsilastirma": { productName1: "A", price1: "60", quantity1: "500", unit1: "g", productName2: "B", price2: "110", quantity2: "1", unit2: "kg" },
+  "aylik-katkili-birikim-hesaplama": { principal: "1000", contribution: "100", annualRate: "5", months: "12", timing: "end" },
+  "yolculuk-maliyeti-hesaplama": { distance: "100", consumption: "7", fuelPrice: "40", journey: "one-way", otherCosts: "0", people: "1" },
+  "desi-hacim-hesaplama": { width: "30", length: "20", height: "10", sizeUnit: "cm", divisor: "3000" }
 };
 
 describe("Turkish number helpers", () => {
@@ -109,7 +114,7 @@ describe("date calculators", () => {
 
 describe("education and daily-life calculators", () => {
   it("calculates score, averages, and percentages", () => {
-    expect(calculate("sinav-puani-hesaplama", { correct: "30", wrong: "4", total: "40" }).value).toBe(72.5);
+    expect(calculate("sinav-puani-hesaplama", { correct: "30", wrong: "4", total: "40", wrongPenalty: "4" }).details?.[0]).toContain("72,5");
     expect(calculate("not-ortalamasi-hesaplama", { grade1: "70", grade2: "90" }).value).toBe(80);
     expect(calculate("basari-yuzdesi-hesaplama", { achieved: "0", total: "10" }).value).toBe(0);
     expect(calculate("harf-notu-hesaplama", { grade: "90" }).displayValue).toBe("AA");
@@ -117,7 +122,7 @@ describe("education and daily-life calculators", () => {
 
   it("validates grade ranges and exam totals", () => {
     expect(() => calculate("not-ortalamasi-hesaplama", { grade1: "101", grade2: "90" })).toThrow();
-    expect(() => calculate("sinav-puani-hesaplama", { correct: "8", wrong: "4", total: "10" })).toThrow();
+    expect(() => calculate("sinav-puani-hesaplama", { correct: "8", wrong: "4", total: "10", wrongPenalty: "4" })).toThrow();
     expect(() => calculate("basari-yuzdesi-hesaplama", { achieved: "11", total: "10" })).toThrow();
   });
 
@@ -175,8 +180,35 @@ describe("education and daily-life calculators", () => {
     expect(calculate("yakit-tuketimi-hesaplama", { distance: "500", fuel: "35", price: "45" }).details?.[0]).toContain("1.575");
     expect(calculate("elektrik-faturasi-hesaplama", { usage: "250", unitPrice: "2,5" }).value).toBe(625);
     expect(calculate("is-gunu-hesaplama", { startDate: "2024-01-08", endDate: "2024-01-15" }).value).toBe(5);
-    expect(calculate("is-gunu-hesaplama", { startDate: "2024-01-15", endDate: "2024-01-08" }).value).toBe(5);
+    expect(() => calculate("is-gunu-hesaplama", { startDate: "2024-01-15", endDate: "2024-01-08" })).toThrow(/sonra olamaz/);
     expect(calculate("is-gunu-hesaplama", { startDate: "2024-01-06", endDate: "2024-01-07" }).value).toBe(0);
+    expect(calculate("is-gunu-hesaplama", {
+      startDate: "2024-01-08", endDate: "2024-01-15", includeStart: "yes", includeEnd: "no", holidays: "2024-01-09"
+    }).value).toBe(4);
+  });
+
+  it("supports percentage operations and dynamic calculator boundaries", () => {
+    expect(calculate("yuzde-hesaplama", { operation: "share", amount: "1", base: "4" }).value).toBe(25);
+    expect(calculate("yuzde-hesaplama", { operation: "change", start: "100", end: "0" }).value).toBe(-100);
+    expect(calculate("yuzde-hesaplama", { operation: "add", amount: "200", percent: "15" }).value).toBe(230);
+    expect(calculate("yuzde-hesaplama", { operation: "subtract", amount: "200", percent: "15" }).value).toBe(170);
+    expect(() => calculate("yuzde-hesaplama", { operation: "change", start: "0", end: "100" })).toThrow(/sıfır/);
+    expect(() => calculate("yuzde-hesaplama", { operation: "share", amount: "1", base: "0" })).toThrow(/sıfır/);
+    expect(calculate("birim-fiyat-karsilastirma", {
+      _rowCount: "3", productName2: "A", price2: "60", quantity2: "500", unit2: "g",
+      productName3: "B", price3: "110", quantity3: "1", unit3: "kg"
+    }).value).toBeCloseTo(0.11);
+    expect(() => calculate("birim-fiyat-karsilastirma", {
+      productName1: "A", price1: "60", quantity1: "500", unit1: "g",
+      productName2: "B", price2: "110", quantity2: "1", unit2: "l"
+    })).toThrow(/aynı türde/);
+    const savings = calculate("aylik-katkili-birikim-hesaplama", {
+      principal: "0", contribution: "100", annualRate: "0", months: "1", target: "200"
+    });
+    expect(savings.details?.[1]).toContain("2 ay içinde");
+    expect(() => calculate("kredi-taksit-hesaplama", {
+      principal: "1000", monthlyRate: "0", months: "1201"
+    })).toThrow(/1–1.200/);
   });
 
   it("calculates simple interest, exchange conversion, and pregnancy week estimates", () => {

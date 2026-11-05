@@ -4,11 +4,28 @@ export type CategoryId = "finans" | "tarih" | "egitim" | "gunluk-yasam";
 export type FieldDefinition = {
   name: string;
   label: string;
-  type: "number" | "date" | "select";
+  type: "number" | "date" | "select" | "text";
   placeholder?: string;
   unit?: string;
+  help?: string;
+  showWhen?: { field: string; value: string | string[] };
   options?: { label: string; value: string }[];
 };
+export type CalculatorMode =
+  | "percentage"
+  | "grade-list"
+  | "course-list"
+  | "weighted-list"
+  | "gpa-list"
+  | "exam-net"
+  | "loan-plan"
+  | "currency"
+  | "electricity"
+  | "marketplace-profit"
+  | "unit-price"
+  | "monthly-savings"
+  | "trip-cost"
+  | "dimensional-weight";
 export type ToolDefinition = {
   id: string;
   name: string;
@@ -20,6 +37,7 @@ export type ToolDefinition = {
   formula: string;
   example: string;
   fields: FieldDefinition[];
+  mode?: CalculatorMode;
   popular?: boolean;
   isNew?: boolean;
 };
@@ -32,9 +50,17 @@ export const categories: { id: CategoryId; name: string; href: string; descripti
   { id: "gunluk-yasam", name: "Günlük Yaşam", href: "/gunluk-yasam", description: "Ölçü, dönüşüm ve günlük ihtiyaç araçları." }
 ];
 
-const numberField = (name: string, label: string, placeholder: string, unit?: string): FieldDefinition =>
-  ({ name, label, type: "number", placeholder, unit });
+const numberField = (
+  name: string,
+  label: string,
+  placeholder: string,
+  unit?: string,
+  help?: string,
+  showWhen?: FieldDefinition["showWhen"]
+): FieldDefinition => ({ name, label, type: "number", placeholder, unit, help, showWhen });
 const dateField = (name: string, label: string): FieldDefinition => ({ name, label, type: "date" });
+const textField = (name: string, label: string, placeholder: string, help?: string): FieldDefinition =>
+  ({ name, label, type: "text", placeholder, help });
 const selectField = (name: string, label: string, options: FieldDefinition["options"]): FieldDefinition =>
   ({ name, label, type: "select", options });
 
@@ -51,24 +77,30 @@ const letterGradeOptions = [
   { label: "FF (0,00)", value: "FF" }
 ];
 
-const gpaFields = Array.from({ length: 5 }, (_, index) => {
-  const courseNumber = index + 1;
-  return [
-    selectField(`grade${courseNumber}`, `${courseNumber}. ders harf notu`, letterGradeOptions),
-    numberField(`credit${courseNumber}`, `${courseNumber}. ders kredisi`, "Örn. 3", "kredi")
-  ];
-}).flat();
-
 export const tools: ToolDefinition[] = [
   {
     id: "yuzde-hesaplama", name: "Yüzde hesaplama", category: "finans", popular: true,
     description: "Bir tutarın belirli bir yüzdeye karşılık gelen değerini bulun.",
     title: "Yüzde Hesaplama – Bir Sayının Yüzdesini Bulun | PratikHesap",
-    metaDescription: "Bir sayının yüzde kaçını hesaplayın. Tutarı ve oranı girin, yüzde hesabı sonucunu anında ve Türkçe sayı formatında görün.",
-    intro: "Yüzde hesaplama aracıyla herhangi bir tutarın belirlediğiniz oran kadarını kolayca bulabilirsiniz. Sonuç, girdiğiniz tutarın yüzde karşılığıdır.",
-    formula: "Yüzde tutarı = Tutar × Yüzde oranı ÷ 100",
-    example: "2.000 TL'nin %15'i: 2.000 × 15 ÷ 100 = 300 TL.",
-    fields: [numberField("amount", "Tutar", "Örn. 2000"), numberField("percent", "Yüzde oranı", "Örn. 15", "%")]
+    metaDescription: "Bir sayının yüzdesini, iki değer arasındaki oranı veya değişimi; yüzde ekleme ve çıkarma işlemlerini tek araçta hesaplayın.",
+    intro: "Yüzde aracı beş işlemi destekler: bir sayının yüzdesi, bir değerin başka bir değere oranı, iki değer arasındaki yüzde değişim, yüzde ekleme ve yüzde çıkarma.",
+    formula: "Yüzde tutarı = A × B ÷ 100. Oran = A ÷ B × 100. Değişim = (Bitiş − Başlangıç) ÷ Başlangıç × 100.",
+    example: "2.000'in %15'i 300'dür. 100'den 125'e değişim %25 artıştır; başlangıç sıfırsa yüzde değişim tanımsızdır.",
+    mode: "percentage",
+    fields: [
+      selectField("operation", "Hesaplama türü", [
+        { label: "A sayısının %B'si", value: "of" },
+        { label: "A, B'nin yüzde kaçı?", value: "share" },
+        { label: "A'dan B'ye yüzde değişim", value: "change" },
+        { label: "A'ya yüzde ekle", value: "add" },
+        { label: "A'dan yüzde çıkar", value: "subtract" }
+      ]),
+      numberField("amount", "Sayı (A)", "Örn. 2000", "₺", undefined, { field: "operation", value: ["of", "share", "add", "subtract"] }),
+      numberField("percent", "Yüzde oranı (B)", "Örn. 15", "%", undefined, { field: "operation", value: ["of", "add", "subtract"] }),
+      numberField("base", "Taban sayı (B)", "Örn. 2000", "₺", undefined, { field: "operation", value: "share" }),
+      numberField("start", "Başlangıç değeri (A)", "Örn. 100", "₺", undefined, { field: "operation", value: "change" }),
+      numberField("end", "Bitiş değeri (B)", "Örn. 125", "₺", undefined, { field: "operation", value: "change" })
+    ]
   },
   {
     id: "maas-zam-hesaplama", name: "Maaş zam hesaplama", category: "finans", popular: true,
@@ -192,20 +224,33 @@ export const tools: ToolDefinition[] = [
     description: "İki sınav notunuzun basit aritmetik ortalamasını bulun.",
     title: "Not Ortalaması Hesaplama – Sınav Notu Ortalamanızı Bulun | PratikHesap",
     metaDescription: "İki sınav notunuzu girerek 100 üzerinden basit not ortalamanızı hesaplayın.",
-    intro: "İki sınav notunun eşit ağırlıklı aritmetik ortalamasını hesaplayın. Ağırlıklandırma veya okul yönetmeliğine bağlı katsayılar bu basit hesaplamaya dahil değildir.",
-    formula: "Not ortalaması = (1. not + 2. not) ÷ 2",
-    example: "70 ve 90 notlarının eşit ağırlıklı ortalaması (70 + 90) ÷ 2 = 80 puandır.",
-    fields: [numberField("grade1", "1. not", "Örn. 70", "puan"), numberField("grade2", "2. not", "Örn. 90", "puan")]
+    intro: "İki veya daha fazla not ekleyerek basit aritmetik ortalamayı bulun. En fazla 30 not girebilirsiniz; bu hesaplama okulun ağırlıklı not yönetmeliğini uygulamaz.",
+    formula: "Not ortalaması = Girilen notların toplamı ÷ not sayısı",
+    example: "70, 80 ve 90 notlarının ortalaması (70 + 80 + 90) ÷ 3 = 80 puandır.",
+    mode: "grade-list",
+    fields: [numberField("grade1", "Not", "Örn. 70", "puan")]
   },
   {
     id: "sinav-puani-hesaplama", name: "Sınav puanı hesaplama", category: "egitim",
     description: "Doğru ve yanlış cevaplarınıza göre net ve puan hesabı yapın.",
     title: "Sınav Puanı Hesaplama – Net ve Puanınızı Bulun | PratikHesap",
     metaDescription: "Doğru, yanlış ve toplam soru sayısını girin; 4 yanlışın 1 doğruyu götürdüğü 100'lük sınav puanınızı hesaplayın.",
-    intro: "Doğru ve yanlış sayınıza göre netinizi hesaplayın. Bu araçta dört yanlış bir doğruyu götürür ve net, toplam soru sayısına oranlanarak 100 puana çevrilir.",
-    formula: "Net = Doğru − Yanlış ÷ 4; puan = max(0, net) ÷ toplam soru × 100",
+    intro: "Doğru, yanlış ve toplam soru sayısını girip yanlış götürme kuralını seçin. Araç neti ve basit net/toplam oranını verir; resmî sınav puanı hesaplamaz.",
+    formula: "Net = Doğru − Yanlış ÷ seçilen yanlış götürme katsayısı. Basit oran = Net ÷ toplam soru × 100.",
     example: "40 soruda 30 doğru ve 4 yanlış, 29 net ve 72,5 puan verir.",
-    fields: [numberField("correct", "Doğru sayısı", "Örn. 30"), numberField("wrong", "Yanlış sayısı", "Örn. 4"), numberField("total", "Toplam soru sayısı", "Örn. 40")]
+    mode: "exam-net",
+    fields: [
+      numberField("correct", "Doğru sayısı", "Örn. 30"),
+      numberField("wrong", "Yanlış sayısı", "Örn. 4"),
+      numberField("total", "Toplam soru sayısı", "Örn. 40"),
+      selectField("wrongPenalty", "Yanlış götürme kuralı", [
+        { label: "Yanlış doğruyu götürmez", value: "0" },
+        { label: "3 yanlış 1 doğruyu götürür", value: "3" },
+        { label: "4 yanlış 1 doğruyu götürür", value: "4" },
+        { label: "Kullanıcı tanımlı", value: "custom" }
+      ]),
+      numberField("customPenalty", "Kaç yanlış 1 doğruyu götürüyor?", "Örn. 4", "yanlış", undefined, { field: "wrongPenalty", value: "custom" })
+    ]
   },
   {
     id: "basari-yuzdesi-hesaplama", name: "Başarı yüzdesi hesaplama", category: "egitim",
@@ -232,10 +277,17 @@ export const tools: ToolDefinition[] = [
     description: "Üç ders notunun eşit ağırlıklı ortalamasını hesaplayın.",
     title: "Ders Ortalaması Hesaplama – Notlarınızın Ortalamasını Bulun | PratikHesap",
     metaDescription: "Üç ders notunu girerek 100 üzerinden eşit ağırlıklı ders ortalamanızı hemen hesaplayın.",
-    intro: "Üç ders notunun eşit ağırlıklı ortalamasını hesaplayın. Ders kredileri farklıysa sonuç kurumunuzdaki ağırlıklı ortalamadan farklı olabilir.",
-    formula: "Ders ortalaması = (1. ders + 2. ders + 3. ders) ÷ 3",
-    example: "80, 70 ve 90 notlarının eşit ağırlıklı ortalaması 80 puandır.",
-    fields: [numberField("grade1", "1. ders notu", "Örn. 80"), numberField("grade2", "2. ders notu", "Örn. 70"), numberField("grade3", "3. ders notu", "Örn. 90")]
+    intro: "Ders adı ve not ekleyin; isterseniz kredi ya da ders saatine göre ağırlıklı ortalamayı seçin. En fazla 30 ders eklenebilir.",
+    formula: "Eşit ortalama = notların toplamı ÷ ders sayısı. Ağırlıklı ortalama = Σ(not × kredi/saat) ÷ Σ(kredi/saat).",
+    example: "80, 70 ve 90 notları eşit ağırlıkla 80 puandır. 80 notu 3 kredi, 70 notu 1 kredi ise ağırlıklı ortalama 77,5 puandır.",
+    mode: "course-list",
+    fields: [
+      selectField("averageMode", "Ortalama türü", [
+        { label: "Eşit ağırlıklı", value: "equal" },
+        { label: "Kredi / ders saati ağırlıklı", value: "weighted" }
+      ]),
+      numberField("grade1", "Ders notu", "Örn. 80")
+    ]
   },
   {
     id: "metrekare-hesaplama", name: "Metrekare hesaplama", category: "gunluk-yasam",
@@ -301,10 +353,11 @@ export const tools: ToolDefinition[] = [
     description: "Harf notu ve ders kredilerini kullanarak 4 üzerinden ağırlıklı ortalamanızı bulun.",
     title: "4'lük Not Sistemi Hesaplama – Üniversite GPA ve AGNO | PratikHesap",
     metaDescription: "Üniversite harf notlarınızı ve AKTS ya da yerel kredi değerlerinizi girin; 4'lük sistemde ağırlıklı not ortalamanızı (GPA/AGNO) hesaplayın.",
-    intro: "Derslerinizin harf notunu ve kredi değerini girerek 4,00 üzerinden kredi ağırlıklı genel not ortalamanızı (GPA/AGNO) hesaplayın. En fazla beş ders ekleyebilir, kullanmadığınız ders alanlarını boş bırakabilirsiniz.",
+    intro: "Derslerin harf notunu ve kredi değerini ekleyerek 4,00 üzerinden ağırlıklı ortalamayı hesaplayın. En fazla 30 ders eklenebilir. İsteğe bağlı önceki toplam kredi ve ortalamayı girerek kümülatif AGNO'yu da hesaplayabilirsiniz.",
     formula: "4'lük ortalama = Σ (harf notu katsayısı × ders kredisi) ÷ Σ ders kredisi. Bu hesaplayıcıda AA=4,00; BA=3,50; BB=3,00; CB=2,50; CC=2,00; DC=1,50; DD=1,00; FD=0,50; FF=0,00 kullanılır.",
     example: "3 kredilik AA ve 2 kredilik BB için ortalama: (4,00 × 3 + 3,00 × 2) ÷ (3 + 2) = 3,60 / 4,00.",
-    fields: gpaFields
+    mode: "gpa-list",
+    fields: [selectField("grade1", "Ders harf notu", letterGradeOptions)]
   },
   {
     id: "agirlikli-not-ortalamasi-hesaplama", name: "Ağırlıklı not ortalaması", category: "egitim", popular: true, isNew: true,
@@ -314,14 +367,8 @@ export const tools: ToolDefinition[] = [
     intro: "Üç değerlendirme notunu (ör. vize, final ve ödev) kendi ağırlıklarıyla hesaplayıp dönem ortalamasını bulun. Ağırlık yüzdelerinin toplamı tam olarak %100 olmalıdır.",
     formula: "Ağırlıklı ortalama = (1. not × 1. ağırlık + 2. not × 2. ağırlık + 3. not × 3. ağırlık) ÷ 100",
     example: "70 vize (%40), 80 final (%50) ve 100 ödev (%10): 70×0,40 + 80×0,50 + 100×0,10 = 78 puan.",
-    fields: [
-      numberField("score1", "1. değerlendirme notu", "Örn. 70", "puan"),
-      numberField("weight1", "1. değerlendirme ağırlığı", "Örn. 40", "%"),
-      numberField("score2", "2. değerlendirme notu", "Örn. 80", "puan"),
-      numberField("weight2", "2. değerlendirme ağırlığı", "Örn. 50", "%"),
-      numberField("score3", "3. değerlendirme notu", "Örn. 100", "puan"),
-      numberField("weight3", "3. değerlendirme ağırlığı", "Örn. 10", "%")
-    ]
+    mode: "weighted-list",
+    fields: [numberField("score1", "Değerlendirme notu", "Örn. 70", "puan")]
   },
   {
     id: "finalde-gerekli-not-hesaplama", name: "Finalde gerekli not hesaplama", category: "egitim", isNew: true,
@@ -348,8 +395,10 @@ export const tools: ToolDefinition[] = [
     fields: [
       numberField("principal", "Kredi tutarı", "Örn. 100000", "₺"),
       numberField("monthlyRate", "Aylık faiz oranı", "Örn. 2,5", "%"),
-      numberField("months", "Vade", "Örn. 12", "ay")
-    ]
+      numberField("months", "Vade", "Örn. 12", "ay"),
+      numberField("fee", "Aylık diğer gider (isteğe bağlı)", "Örn. 0", "₺")
+    ],
+    mode: "loan-plan"
   },
   {
     id: "bilesik-faiz-hesaplama", name: "Bileşik faiz hesaplama", category: "finans", isNew: true,
@@ -395,8 +444,13 @@ export const tools: ToolDefinition[] = [
     example: "TCMB bülteninde 1 USD satış kuru 35,00 TL ise 100 USD için yaklaşık karşılık 100 × 35,00 = 3.500 TL olur. Gösterilen oran örnektir; araç bülten verisini kullanır.",
     fields: [
       numberField("amount", "Döviz tutarı", "Örn. 100"),
+      selectField("direction", "Dönüşüm yönü", [
+        { label: "Dövizden TL'ye", value: "to-try" },
+        { label: "TL'den dövize", value: "from-try" }
+      ]),
       selectField("currency", "Döviz türü", tcmbCurrencies.map(({ code, name }) => ({ label: name, value: code })))
-    ]
+    ],
+    mode: "currency"
   },
   {
     id: "yakit-tuketimi-hesaplama", name: "Yakıt tüketimi hesaplama", category: "gunluk-yasam", isNew: true,
@@ -421,19 +475,137 @@ export const tools: ToolDefinition[] = [
     formula: "Yaklaşık enerji bedeli = Tüketim (kWh) × Enerji birim fiyatı (TL/kWh)",
     example: "250 kWh tüketim ve 2,50 TL/kWh enerji birim fiyatında yaklaşık enerji bedeli 625 TL'dir; toplam fatura farklı olabilir.",
     fields: [
-      numberField("usage", "Elektrik tüketimi", "Örn. 250", "kWh"),
-      numberField("unitPrice", "Enerji birim fiyatı", "Örn. 2,5", "₺/kWh")
+      selectField("mode", "Hesaplama türü", [
+        { label: "Tüketim ve birim fiyat", value: "consumption" },
+        { label: "Cihaz gücü ve kullanım süresi", value: "device" }
+      ]),
+      numberField("usage", "Elektrik tüketimi", "Örn. 250", "kWh", undefined, { field: "mode", value: "consumption" }),
+      numberField("unitPrice", "Enerji birim fiyatı", "Örn. 2,5", "₺/kWh"),
+      numberField("watts", "Cihaz gücü", "Örn. 1500", "W", undefined, { field: "mode", value: "device" }),
+      numberField("hoursPerDay", "Günlük kullanım", "Örn. 4", "saat", undefined, { field: "mode", value: "device" }),
+      numberField("days", "Gün sayısı", "Örn. 30", "gün", undefined, { field: "mode", value: "device" })
+    ],
+    mode: "electricity"
+  },
+  {
+    id: "pazaryeri-net-kar-hesaplama", name: "Pazaryeri net kâr hesaplama", category: "finans", isNew: true,
+    description: "Ürün maliyeti, indirim, komisyon ve ek giderlere göre tahmini satış kârını hesaplayın.",
+    title: "Pazaryeri Net Kâr Hesaplama – Komisyon ve Gider Sonrası | PratikHesap",
+    metaDescription: "Satış fiyatı, maliyet, indirim, komisyon ve giderleri girerek pazaryeri satışından kalan tahmini kârı ve oranları hesaplayın.",
+    intro: "Satış fiyatı, ürün maliyeti, komisyon, kargo ve diğer giderleri girerek kalan tahmini kârı bulun. Vergi ve platforma özel kesintiler yalnızca girdiğiniz giderler arasındaysa hesaba katılır.",
+    formula: "Tahmini kâr = indirimli satış fiyatı − ürün maliyeti − seçilen komisyon matrahındaki komisyon − kargo − ek giderler.",
+    example: "1.000 TL satış, 500 TL maliyet, %10 komisyon, 50 TL kargo ve 20 TL giderde (indirim yok) tahmini kâr 330 TL'dir.",
+    mode: "marketplace-profit",
+    fields: [
+      numberField("salePrice", "Liste satış fiyatı", "Örn. 1000", "₺"),
+      numberField("productCost", "Ürün maliyeti", "Örn. 500", "₺"),
+      numberField("discountPercent", "İndirim", "Örn. 10", "%"),
+      numberField("commissionRate", "Komisyon oranı", "Örn. 10", "%"),
+      selectField("commissionBasis", "Komisyon hangi tutar üzerinden?", [
+        { label: "İndirim öncesi liste fiyatı", value: "list" },
+        { label: "İndirim sonrası satış fiyatı", value: "discounted" }
+      ]),
+      numberField("shipping", "Kargo gideri", "Örn. 50", "₺"),
+      numberField("extraExpenses", "Diğer giderler", "Örn. 20", "₺")
+    ]
+  },
+  {
+    id: "birim-fiyat-karsilastirma", name: "Birim fiyat karşılaştırma", category: "gunluk-yasam", isNew: true,
+    description: "Paket fiyatlarını uyumlu miktar birimine göre karşılaştırıp ekonomik seçeneği bulun.",
+    title: "Birim Fiyat Karşılaştırma – Hangi Paket Daha Ekonomik? | PratikHesap",
+    metaDescription: "İki veya daha fazla ürünün fiyat, miktar ve paket adedini girin; ortak birim fiyatlarını karşılaştırarak ekonomik seçeneği bulun.",
+    intro: "Ürün fiyatı, paket miktarı ve paket adedini girin. Uyumlu birimleri ortak ölçüye çevirip birim fiyatı karşılaştırır; ağırlık, hacim ve adet birbirine dönüştürülmez.",
+    formula: "Birim fiyat = Paket fiyatı ÷ (miktar × paket adedi), miktar ortak temel birime dönüştürülür.",
+    example: "500 g ürün 60 TL ise kilogram fiyatı 120 TL'dir. 1 kg ürün 110 TL ise ikinci ürün birim fiyat bakımından ekonomiktir.",
+    mode: "unit-price",
+    fields: [
+      numberField("price1", "1. ürün fiyatı", "Örn. 60", "₺"),
+      numberField("quantity1", "1. ürün miktarı", "Örn. 500"),
+      selectField("unit1", "1. ürün birimi", [
+        { label: "Kilogram", value: "kg" }, { label: "Gram", value: "g" },
+        { label: "Litre", value: "l" }, { label: "Mililitre", value: "ml" },
+        { label: "Adet", value: "adet" }, { label: "Metre", value: "m" }, { label: "Santimetre", value: "cm" }
+      ])
+    ]
+  },
+  {
+    id: "aylik-katkili-birikim-hesaplama", name: "Aylık katkılı birikim hesaplama", category: "finans", isNew: true,
+    description: "Başlangıç birikimi ve düzenli aylık katkıların varsayımsal dönem sonu tutarını görün.",
+    title: "Aylık Katkılı Birikim Hesaplama – Düzenli Yatırım Tahmini | PratikHesap",
+    metaDescription: "Başlangıç tutarı, aylık katkı, varsayımsal yıllık oran ve süreyle katkı toplamını ve tahmini getiriyi ayrı hesaplayın.",
+    intro: "Başlangıç tutarı ile her ay eklenen katkının varsayımsal getiri oranında nasıl birikebileceğini hesaplayın. Getiri garanti değildir; vergi, ücret, enflasyon ve piyasa dalgalanması dahil değildir.",
+    formula: "Her ay bakiye, yıllık varsayımsal oran ÷ 12 ile büyütülür; katkı, seçime göre ay başında veya sonunda eklenir.",
+    example: "10.000 TL başlangıç, ay sonunda 1.000 TL katkı ve yıllık nominal %12 varsayımla 12 ay sonunda yaklaşık 23.000 TL civarında bir tutar oluşur.",
+    mode: "monthly-savings",
+    fields: [
+      numberField("principal", "Başlangıç tutarı", "Örn. 10000", "₺"),
+      numberField("contribution", "Aylık katkı", "Örn. 1000", "₺"),
+      numberField("annualRate", "Varsayımsal yıllık oran", "Örn. 12", "%"),
+      numberField("months", "Süre", "Örn. 12", "ay"),
+      selectField("timing", "Katkı zamanı", [
+        { label: "Ay sonunda", value: "end" },
+        { label: "Ay başında", value: "beginning" }
+      ]),
+      numberField("target", "Hedef tutar (isteğe bağlı)", "Örn. 50000", "₺")
+    ]
+  },
+  {
+    id: "yolculuk-maliyeti-hesaplama", name: "Yolculuk maliyeti hesaplama", category: "gunluk-yasam", isNew: true,
+    description: "Girilen mesafe, araç tüketimi, yakıt fiyatı ve diğer giderlerle yol maliyetini tahmin edin.",
+    title: "Yolculuk Maliyeti Hesaplama – Yakıt ve Kişi Başı Tutar | PratikHesap",
+    metaDescription: "Mesafe, 100 km yakıt tüketimi, litre fiyatı, geçiş giderleri ve kişi sayısıyla yolculuk maliyetini hesaplayın.",
+    intro: "Mesafe, aracınızın tüketimi ve kendi girdiğiniz yakıt fiyatına göre yolculuk yakıt giderini hesaplayın. Mesafe ve fiyat otomatik alınmaz; geçiş ve diğer giderleri isteğe bağlı ekleyin.",
+    formula: "Yakıt gideri = mesafe × (tek yön veya gidiş-dönüş katsayısı) × tüketim ÷ 100 × litre fiyatı. Yol toplamı = yakıt + ek giderler.",
+    example: "300 km tek yön, 7 L/100 km ve 40 TL/L ile yakıt gideri 840 TL'dir; ek giderler bunun üzerine eklenir.",
+    mode: "trip-cost",
+    fields: [
+      numberField("distance", "Tek yön mesafe", "Örn. 300", "km"),
+      numberField("consumption", "Araç tüketimi", "Örn. 7", "L/100 km"),
+      numberField("fuelPrice", "Yakıt fiyatı", "Örn. 40", "₺/L"),
+      selectField("journey", "Yolculuk yönü", [
+        { label: "Tek yön", value: "one-way" },
+        { label: "Gidiş dönüş", value: "round-trip" }
+      ]),
+      numberField("otherCosts", "Geçiş ve diğer giderler", "Örn. 0", "₺"),
+      numberField("people", "Yolcu sayısı", "Örn. 1", "kişi")
+    ]
+  },
+  {
+    id: "desi-hacim-hesaplama", name: "Desi ve hacim ağırlığı hesaplama", category: "gunluk-yasam", isNew: true,
+    description: "Paket ölçüleri ve girilen desi böleniyle hacim ağırlığını hesaplayın.",
+    title: "Desi Hesaplama – Kargo Hacim Ağırlığı ve Paket Hacmi | PratikHesap",
+    metaDescription: "Paket en, boy ve yüksekliğini, ölçü birimini ve taşıyıcı desi bölenini girerek desi ile hacim ağırlığını hesaplayın.",
+    intro: "Paket ölçülerinden hacmi ve sizin belirlediğiniz desi bölenine göre hacim ağırlığını bulun. Taşıyıcıların bölenleri ve ücretlendirme kuralları farklı olabilir; gönderi ücretini otomatik belirlemez.",
+    formula: "Hacim (cm³) = en × boy × yükseklik. Hacim ağırlığı (kg) = hacim (cm³) ÷ girilen desi böleni.",
+    example: "30 × 20 × 10 cm paket ve 3.000 böleniyle hacim 6.000 cm³, hacim ağırlığı 2 kg'dır.",
+    mode: "dimensional-weight",
+    fields: [
+      numberField("width", "En", "Örn. 30"),
+      numberField("length", "Boy", "Örn. 20"),
+      numberField("height", "Yükseklik", "Örn. 10"),
+      selectField("sizeUnit", "Ölçü birimi", [
+        { label: "Santimetre", value: "cm" }, { label: "Milimetre", value: "mm" }, { label: "Metre", value: "m" }
+      ]),
+      numberField("divisor", "Desi böleni", "Taşıyıcınızın değerini girin"),
+      numberField("actualWeight", "Gerçek ağırlık (isteğe bağlı)", "Örn. 1,5", "kg")
     ]
   },
   {
     id: "is-gunu-hesaplama", name: "İş günü hesaplama", category: "tarih", isNew: true,
-    description: "İki tarih arasındaki hafta içi günleri sayın; resmî tatiller hariçtir.",
+    description: "İki tarih arasındaki seçtiğiniz çalışma günlerini sayın; tatilleri siz tanımlayın.",
     title: "İş Günü Hesaplama – İki Tarih Arası Hafta İçi Gün Sayısı | PratikHesap",
-    metaDescription: "Başlangıç ve bitiş tarihini seçerek aradaki hafta içi iş günü sayısını bulun; hesaplama resmî tatilleri kapsamaz.",
-    intro: "İki tarih arasındaki pazartesi-cuma günlerini sayın. Tarihler hangi sırayla girilirse girilsin, erken tarih sayılmaz ve geç tarih sayılır; resmî ve yerel tatiller bu basit hesaplamaya dahil değildir.",
-    formula: "İş günü farkı = Erken tarihten sonraki geç tarihe kadar olan pazartesi-cuma günlerinin sayısı; erken tarih hariç, geç tarih dahil edilir.",
-    example: "Pazartesi başlangıç ile sonraki pazartesi bitiş arasında, başlangıç hariç ve bitiş dahil 5 iş günü vardır.",
-    fields: [dateField("startDate", "Başlangıç tarihi"), dateField("endDate", "Bitiş tarihi")]
+    metaDescription: "Başlangıç ve bitiş dahil seçenekleri, cumartesi çalışma seçimi ve kullanıcı tanımlı tam gün tatillerle iş günü sayısını hesaplayın.",
+    intro: "İş günü sayımında başlangıç/bitiş dahil durumunu seçin, isterseniz cumartesiyi iş günü sayın ve tam gün tatilleri kendiniz girin. Resmî tatil takvimi otomatik alınmaz; yarım günler ayrı hesaplanmaz.",
+    formula: "İş günü = seçilen tarih aralığındaki pazartesi-cuma günleri (isteğe bağlı cumartesi) − kullanıcı tarafından girilen tam gün tatilleri.",
+    example: "Pazartesiden sonraki pazartesiye kadar iki uç tarih hariç tutulursa hafta içi 4 iş günü sayılır.",
+    fields: [
+      dateField("startDate", "Başlangıç tarihi"),
+      dateField("endDate", "Bitiş tarihi"),
+      selectField("includeStart", "Başlangıç tarihini say", [{ label: "Hariç", value: "no" }, { label: "Dahil", value: "yes" }]),
+      selectField("includeEnd", "Bitiş tarihini say", [{ label: "Dahil", value: "yes" }, { label: "Hariç", value: "no" }]),
+      selectField("saturday", "Cumartesiyi iş günü say", [{ label: "Hayır", value: "no" }, { label: "Evet", value: "yes" }]),
+      textField("holidays", "Çıkarılacak tam gün tatiller (isteğe bağlı)", "YYYY-MM-DD, YYYY-MM-DD", "Resmî tatilleri otomatik indirmez; tarihleri virgülle ayırarak kendiniz girin.")
+    ]
   }
 ];
 
