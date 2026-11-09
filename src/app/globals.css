@@ -22,6 +22,22 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+body:has(.embed-shell) {
+  background: #fff;
+}
+
+body:has(.embed-shell) > .skip-link,
+body:has(.embed-shell) > header,
+body:has(.embed-shell) > .ad-slot,
+body:has(.embed-shell) > footer {
+  display: none;
+}
+
+body:has(.embed-shell) > #main-content {
+  width: 100%;
+  margin: 0;
+}
+
 button,
 input,
 select {

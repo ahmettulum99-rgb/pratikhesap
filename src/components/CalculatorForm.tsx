@@ -41,7 +41,13 @@ async function fetchExchangeRate(currency: string): Promise<ExchangeRateResponse
   return payload;
 }
 
-export function CalculatorForm({ tool }: { tool: Pick<ToolDefinition, "id" | "fields" | "mode"> }) {
+export function CalculatorForm({
+  tool,
+  trackUsage = true
+}: {
+  tool: Pick<ToolDefinition, "id" | "fields" | "mode">;
+  trackUsage?: boolean;
+}) {
   const pathname = usePathname();
   const initialValues = useMemo(() => Object.fromEntries(tool.fields
     .filter((field) => field.type === "select")
@@ -79,9 +85,9 @@ export function CalculatorForm({ tool }: { tool: Pick<ToolDefinition, "id" | "fi
   }, [pathname, queryLoaded, rowCount, shouldSyncUrl, tool.mode, values]);
 
   useEffect(() => {
-    if (!queryLoaded || !shouldSyncUrl) return;
+    if (!queryLoaded || !shouldSyncUrl || !trackUsage) return;
     rememberTool(tool.id);
-  }, [queryLoaded, shouldSyncUrl, tool.id]);
+  }, [queryLoaded, shouldSyncUrl, tool.id, trackUsage]);
 
   const fields: FieldDefinition[] = (() => {
     if (tool.mode === "grade-list") {

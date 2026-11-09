@@ -45,7 +45,32 @@ const toolKeywords: Record<string, string[]> = {
   "birim-fiyat-karsilastirma": ["birim fiyat hesaplama", "ürün fiyatı karşılaştırma", "paket fiyatı karşılaştır", "kg litre birim maliyet"],
   "aylik-katkili-birikim-hesaplama": ["aylık birikim hesaplama", "düzenli yatırım getirisi", "aylık katkı hesaplayıcı", "birikim hedefi hesaplama"],
   "yolculuk-maliyeti-hesaplama": ["yol masrafı hesaplama", "yolculuk yakıt maliyeti", "araç seyahat gideri", "kişi başı yol masrafı"],
-  "desi-hacim-hesaplama": ["desi hesaplama", "kargo hacim ağırlığı", "paket hacmi hesaplama", "desi böleni hesaplama"]
+  "desi-hacim-hesaplama": ["desi hesaplama", "kargo hacim ağırlığı", "paket hacmi hesaplama", "desi böleni hesaplama"],
+  "kidem-tazminati-hesaplama": ["kıdem tazminatı hesaplama", "kıdem tazminatı tavanı", "brüt kıdem tazminatı", "hizmet süresi kıdem hesabı"],
+  "ihbar-tazminati-hesaplama": ["ihbar tazminatı hesaplama", "ihbar süresi hesaplama", "4857 ihbar haftası", "brüt ihbar tazminatı"],
+  "yillik-izin-ucreti-hesaplama": ["yıllık izin ücreti hesaplama", "kullanılmamış izin alacağı", "yıllık izin gün sayısı", "izin ücreti brüt hesaplama"],
+  "kira-artis-orani-hesaplama": ["kira artış oranı hesaplama", "TÜFE kira artışı", "12 aylık ortalama kira", "yeni kira hesaplama"],
+  "konut-kredisi-hesaplama": ["konut kredisi hesaplama", "ev kredisi taksiti", "konut kredisi amortisman tablosu", "konut finansmanı geri ödeme"],
+  "ihtiyac-kredisi-hesaplama": ["ihtiyaç kredisi hesaplama", "tüketici kredisi taksiti", "ihtiyaç kredisi KKDF BSMV", "ihtiyaç kredisi geri ödeme"],
+  "tasit-kredisi-hesaplama": ["taşıt kredisi hesaplama", "araç kredisi taksiti", "taşıt kredisi geri ödeme", "taşıt kredisi amortisman tablosu"],
+  "mevduat-faiz-hesaplama": ["mevduat faiz hesaplama", "vadeli mevduat net getiri", "TL mevduat stopaj hesaplama", "vade faiz getirisi"],
+  "gelir-vergisi-dilimi-hesaplama": ["gelir vergisi dilimi hesaplama", "ücret gelir vergisi tarifesi", "kümülatif vergi matrahı", "marjinal vergi oranı"],
+  "damga-vergisi-hesaplama": ["damga vergisi hesaplama", "kira sözleşmesi damga vergisi", "ücret kağıdı damga vergisi", "sözleşme damga vergisi"],
+  "tapu-harci-hesaplama": ["tapu harcı hesaplama", "alıcı satıcı tapu harcı", "tapu masrafı hesaplama", "taşınmaz satış harcı"],
+  "altin-hesaplama": ["altın hesaplama", "çeyrek altın teorik değer", "gram altın hesaplayıcı", "yarım tam altın ağırlık hesabı"],
+  "yks-puan-hesaplama": ["YKS puan hesaplama", "TYT AYT puan hesaplama", "YKS net puanı", "TYT AYT net hesaplama"],
+  "lgs-puan-hesaplama": ["LGS puan hesaplama", "LGS net hesaplama", "LGS merkezi sınav puanı", "MEB LGS puan tahmini"],
+  "kpss-puan-hesaplama": ["KPSS puan hesaplama", "KPSS P3 hesaplama", "KPSS net puanı", "KPSS puan türleri"],
+  "ales-puan-hesaplama": ["ALES puan hesaplama", "ALES sayısal sözel puanı", "ALES net hesaplama", "ALES eşit ağırlık"],
+  "dgs-puan-hesaplama": ["DGS puan hesaplama", "DGS ÖBP hesaplama", "DGS sayısal sözel puanı", "DGS net hesaplama"],
+  "lise-diploma-notu-hesaplama": ["lise diploma notu hesaplama", "diploma puanı hesaplama", "9 10 11 12 sınıf ortalaması", "lise yıl sonu puanı"],
+  "ideal-kilo-hesaplama": ["ideal kilo hesaplama", "boya göre kilo aralığı", "yetişkin BMI kilo aralığı", "sağlıklı kilo tahmini"],
+  "gunluk-kalori-ihtiyaci-hesaplama": ["günlük kalori ihtiyacı hesaplama", "BMR hesaplama", "bazal metabolizma hızı", "günlük enerji harcaması"],
+  "gunluk-su-ihtiyaci-hesaplama": ["günlük su ihtiyacı hesaplama", "kiloya göre su hesabı", "mL kg su hesaplayıcı", "günlük sıvı hesabı"],
+  "yumurtlama-adet-takvimi-hesaplama": ["yumurtlama günü hesaplama", "adet takvimi hesaplama", "sonraki adet tarihi", "verimli dönem takvimi"],
+  "hicri-takvim-cevirme": ["Hicri takvim çevirme", "Miladi Hicri tarih çevirici", "Hicri tarih hesaplama", "Miladi tarihi Hicriye çevir"],
+  "tarihe-kac-gun-kaldi-hesaplama": ["tarihe kaç gün kaldı", "tarih geri sayım hesaplama", "sınava kaç gün kaldı", "hedef tarihe kalan gün"],
+  "burc-hesaplama": ["burç hesaplama", "doğum tarihine göre burç", "Güneş burcu bulma", "burç bulucu"]
 };
 
 export function getToolKeywords(tool: ToolDefinition): string[] {

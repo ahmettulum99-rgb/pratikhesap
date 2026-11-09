@@ -1,6 +1,9 @@
-const configuredSiteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.hesappratik.xyz").replace(/\/+$/, "");
+const canonicalSiteUrl = "https://www.hesappratik.xyz";
+const configuredSiteUrl = process.env.SITE_URL ?? canonicalSiteUrl;
+const configuredUrl = new URL(configuredSiteUrl);
 
-export const siteUrl = configuredSiteUrl.replace(
-  /^https:\/\/hesappratik\.xyz$/i,
-  "https://www.hesappratik.xyz"
-);
+if (!["hesappratik.xyz", "www.hesappratik.xyz"].includes(configuredUrl.hostname)) {
+  throw new Error("SITE_URL must use hesappratik.xyz or www.hesappratik.xyz.");
+}
+
+export const siteUrl = canonicalSiteUrl;

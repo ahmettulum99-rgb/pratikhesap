@@ -4,9 +4,9 @@ import type { ReactNode } from "react";
 import Script from "next/script";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { AdSenseScript } from "@/components/AdSenseScript";
 import { AdSlot } from "@/components/AdSlot";
 import { JsonLd } from "@/components/JsonLd";
-import { adsenseScriptSrc } from "@/lib/ads";
 import { siteUrl } from "@/lib/site";
 import { getOpenGraphImageUrl } from "@/lib/seo/metadata";
 import { homeMetaDescription, homeMetaTitle } from "@/data/home-seo";
@@ -95,9 +95,9 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
         <Script id="theme-bootstrap" strategy="beforeInteractive">
           {`try{var t=localStorage.getItem("pratikhesap.theme");var d=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",d);document.documentElement.style.colorScheme=d?"dark":"light"}catch(e){}`}
         </Script>
-        <script async src={adsenseScriptSrc} crossOrigin="anonymous" />
       </head>
       <body>
+        <AdSenseScript />
         {structuredData.map((data) => <JsonLd key={data["@type"]} data={data} />)}
         <a className="skip-link" href="#main-content">İçeriğe geç</a>
         <Header />

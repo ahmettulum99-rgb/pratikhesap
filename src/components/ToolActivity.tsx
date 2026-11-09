@@ -50,7 +50,7 @@ export function ToolActivity({ tools, currentTool }: Props) {
   if (currentTool) {
     const isFavorite = favoriteIds.includes(currentTool.id);
     return (
-      <div className="mb-4 flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <button
           type="button"
           onClick={toggleCurrentFavorite}

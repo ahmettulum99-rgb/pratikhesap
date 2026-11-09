@@ -37,7 +37,32 @@ export const relatedToolIds: Record<string, string[]> = {
   "birim-fiyat-karsilastirma": ["indirim-hesaplama", "yuzde-hesaplama", "kilogram-donusumu"],
   "aylik-katkili-birikim-hesaplama": ["bilesik-faiz-hesaplama", "basit-faiz-hesaplama", "kredi-taksit-hesaplama"],
   "yolculuk-maliyeti-hesaplama": ["yakit-tuketimi-hesaplama", "litre-donusumu", "doviz-hesaplama"],
-  "desi-hacim-hesaplama": ["metrekare-hesaplama", "litre-donusumu", "kilogram-donusumu"]
+  "desi-hacim-hesaplama": ["metrekare-hesaplama", "litre-donusumu", "kilogram-donusumu"],
+  "kidem-tazminati-hesaplama": ["ihbar-tazminati-hesaplama", "yillik-izin-ucreti-hesaplama", "brut-net-maas-hesaplama", "maas-zam-artis-hesaplama"],
+  "ihbar-tazminati-hesaplama": ["kidem-tazminati-hesaplama", "yillik-izin-ucreti-hesaplama", "brut-net-maas-hesaplama", "maas-zam-artis-hesaplama"],
+  "yillik-izin-ucreti-hesaplama": ["kidem-tazminati-hesaplama", "ihbar-tazminati-hesaplama", "brut-net-maas-hesaplama", "maas-zam-artis-hesaplama"],
+  "kira-artis-orani-hesaplama": ["konut-kredisi-hesaplama", "mevduat-faiz-hesaplama", "gelir-vergisi-dilimi-hesaplama", "tapu-harci-hesaplama"],
+  "konut-kredisi-hesaplama": ["ihtiyac-kredisi-hesaplama", "tasit-kredisi-hesaplama", "mevduat-faiz-hesaplama", "kira-artis-orani-hesaplama"],
+  "ihtiyac-kredisi-hesaplama": ["konut-kredisi-hesaplama", "tasit-kredisi-hesaplama", "mevduat-faiz-hesaplama", "damga-vergisi-hesaplama"],
+  "tasit-kredisi-hesaplama": ["konut-kredisi-hesaplama", "ihtiyac-kredisi-hesaplama", "mevduat-faiz-hesaplama", "damga-vergisi-hesaplama"],
+  "mevduat-faiz-hesaplama": ["konut-kredisi-hesaplama", "ihtiyac-kredisi-hesaplama", "tasit-kredisi-hesaplama", "altin-hesaplama"],
+  "gelir-vergisi-dilimi-hesaplama": ["brut-net-maas-hesaplama", "damga-vergisi-hesaplama", "kidem-tazminati-hesaplama", "mevduat-faiz-hesaplama"],
+  "damga-vergisi-hesaplama": ["tapu-harci-hesaplama", "gelir-vergisi-dilimi-hesaplama", "kira-artis-orani-hesaplama", "konut-kredisi-hesaplama"],
+  "tapu-harci-hesaplama": ["damga-vergisi-hesaplama", "konut-kredisi-hesaplama", "kira-artis-orani-hesaplama", "mevduat-faiz-hesaplama"],
+  "altin-hesaplama": ["mevduat-faiz-hesaplama", "doviz-hesaplama", "yuzde-hesaplama", "kar-zarar-hesaplama"],
+  "yks-puan-hesaplama": ["lgs-puan-hesaplama", "kpss-puan-hesaplama", "ales-puan-hesaplama", "dgs-puan-hesaplama"],
+  "lgs-puan-hesaplama": ["yks-puan-hesaplama", "kpss-puan-hesaplama", "ales-puan-hesaplama", "dgs-puan-hesaplama"],
+  "kpss-puan-hesaplama": ["yks-puan-hesaplama", "lgs-puan-hesaplama", "ales-puan-hesaplama", "dgs-puan-hesaplama"],
+  "ales-puan-hesaplama": ["yks-puan-hesaplama", "lgs-puan-hesaplama", "kpss-puan-hesaplama", "dgs-puan-hesaplama"],
+  "dgs-puan-hesaplama": ["yks-puan-hesaplama", "lgs-puan-hesaplama", "kpss-puan-hesaplama", "ales-puan-hesaplama"],
+  "lise-diploma-notu-hesaplama": ["not-ortalamasi-gano-hesaplama", "sinav-puani-hesaplama", "yks-puan-hesaplama", "lgs-puan-hesaplama"],
+  "ideal-kilo-hesaplama": ["boy-kilo-orani-hesaplama", "gunluk-kalori-ihtiyaci-hesaplama", "gunluk-su-ihtiyaci-hesaplama", "yumurtlama-adet-takvimi-hesaplama"],
+  "gunluk-kalori-ihtiyaci-hesaplama": ["ideal-kilo-hesaplama", "boy-kilo-orani-hesaplama", "gunluk-su-ihtiyaci-hesaplama", "yumurtlama-adet-takvimi-hesaplama"],
+  "gunluk-su-ihtiyaci-hesaplama": ["ideal-kilo-hesaplama", "boy-kilo-orani-hesaplama", "gunluk-kalori-ihtiyaci-hesaplama", "yumurtlama-adet-takvimi-hesaplama"],
+  "yumurtlama-adet-takvimi-hesaplama": ["gebelik-haftasi-hesaplama", "yas-hesaplama", "dogum-gunune-kalan-sure", "gunluk-kalori-ihtiyaci-hesaplama"],
+  "hicri-takvim-cevirme": ["iki-tarih-arasi-gun-hesaplama", "tarihe-kac-gun-kaldi-hesaplama", "tarihe-gun-ekleme", "tarihten-gun-cikarma"],
+  "tarihe-kac-gun-kaldi-hesaplama": ["iki-tarih-arasi-gun-hesaplama", "tarihe-gun-ekleme", "tarihten-gun-cikarma", "hicri-takvim-cevirme"],
+  "burc-hesaplama": ["yas-hesaplama", "dogum-gunune-kalan-sure", "iki-tarih-arasi-gun-hesaplama", "gunluk-kalori-ihtiyaci-hesaplama"]
 };
 
 export function getRelatedTools(toolId: string): ToolDefinition[] {

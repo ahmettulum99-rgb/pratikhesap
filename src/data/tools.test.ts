@@ -9,10 +9,14 @@ import sitemap from "../app/sitemap";
 import { createPageMetadata } from "../lib/seo/metadata";
 import { createFAQPageStructuredData } from "../lib/seo/faq";
 import { getPayrollConfigTodo, payrollConfigs } from "./payroll-config";
+import { getRegulatedToolTodo, regulatedConfig2026 } from "./regulated-config";
+import { regulatedTools } from "./regulated-tools";
+import { educationHealthTools } from "./education-health-tools";
+import { educationHealthConfig2026, getExamConfigTodo } from "./education-health-config";
 
 describe("calculator catalog", () => {
   it("includes each requested tool with a unique root URL and SEO metadata", () => {
-    expect(tools).toHaveLength(37);
+    expect(tools).toHaveLength(62);
     expect(new Set(tools.map((tool) => tool.id)).size).toBe(tools.length);
     expect(new Set(tools.map((tool) => tool.title)).size).toBe(tools.length);
     expect(new Set(tools.map((tool) => tool.metaDescription)).size).toBe(tools.length);
@@ -155,11 +159,75 @@ describe("calculator catalog", () => {
     expect(tools.find((item) => item.id === "kdv-hesaplama")?.content?.referenceTable?.rows).toHaveLength(3);
   });
 
+  it("provides long-form content, six or more FAQs, and official sources for every new finance calculator", () => {
+    expect(regulatedTools).toHaveLength(12);
+    for (const tool of regulatedTools) {
+      expect(tool.content, tool.id).toBeDefined();
+      const content = tool.content!;
+      expect(content.definition.trim().split(/\s+/).length, tool.id).toBeGreaterThanOrEqual(150);
+      expect(content.steps.length, tool.id).toBeGreaterThanOrEqual(3);
+      expect(content.examples.length, tool.id).toBeGreaterThanOrEqual(2);
+      expect(content.faqs.length, tool.id).toBeGreaterThanOrEqual(6);
+      expect(content.faqs.length, tool.id).toBeLessThanOrEqual(8);
+      expect(content.sources.length, tool.id).toBeGreaterThan(0);
+    }
+  });
+
+  it("keeps unverified annual financial values blocked and cites statutory labor and title-deed values", () => {
+    for (const id of [
+      "kidem-tazminati-hesaplama", "kira-artis-orani-hesaplama", "konut-kredisi-hesaplama",
+      "ihtiyac-kredisi-hesaplama", "tasit-kredisi-hesaplama", "mevduat-faiz-hesaplama",
+      "gelir-vergisi-dilimi-hesaplama", "damga-vergisi-hesaplama", "altin-hesaplama"
+    ]) {
+      expect(getRegulatedToolTodo(id).length, id).toBeGreaterThan(0);
+    }
+    expect(getRegulatedToolTodo("ihbar-tazminati-hesaplama")).toEqual([]);
+    expect(getRegulatedToolTodo("yillik-izin-ucreti-hesaplama")).toEqual([]);
+    expect(getRegulatedToolTodo("tapu-harci-hesaplama")).toEqual([]);
+    expect(regulatedConfig2026.noticePeriods.bands.map((band) => band.weeks)).toEqual([2, 4, 6, 8]);
+    expect([
+      regulatedConfig2026.annualLeave.firstBandMinimumDays,
+      regulatedConfig2026.annualLeave.secondBandMinimumDays,
+      regulatedConfig2026.annualLeave.thirdBandMinimumDays
+    ]).toEqual([14, 20, 26]);
+    expect(regulatedConfig2026.titleDeed.buyerRate.value).toBe(0.02);
+    expect(regulatedConfig2026.titleDeed.sellerRate.value).toBe(0.02);
+  });
+
+  it("adds the requested exam, diploma, health, and calendar tools with long-form content", () => {
+    expect(educationHealthTools).toHaveLength(13);
+    for (const tool of educationHealthTools) {
+      expect(tool.content, tool.id).toBeDefined();
+      const content = tool.content!;
+      expect(content.definition.trim().split(/\s+/).length, tool.id).toBeGreaterThanOrEqual(150);
+      expect(content.steps.length, tool.id).toBeGreaterThanOrEqual(3);
+      expect(content.examples.length, tool.id).toBeGreaterThanOrEqual(2);
+      expect(content.faqs.length, tool.id).toBeGreaterThanOrEqual(6);
+      expect(content.faqs.length, tool.id).toBeLessThanOrEqual(8);
+      expect(content.sources.length, tool.id).toBeGreaterThan(0);
+    }
+    const medicalTools = tools.filter((tool) => tool.medicalDisclaimer);
+    expect(medicalTools.map((tool) => tool.id)).toEqual(expect.arrayContaining([
+      "ideal-kilo-hesaplama", "gunluk-kalori-ihtiyaci-hesaplama", "gunluk-su-ihtiyaci-hesaplama",
+      "yumurtlama-adet-takvimi-hesaplama", "boy-kilo-orani-hesaplama", "gebelik-haftasi-hesaplama"
+    ]));
+    for (const exam of Object.values(educationHealthConfig2026.exams)) {
+      expect(getExamConfigTodo(exam)).toHaveLength(1);
+      expect(exam.lastUpdated).toBe("2026-11-09");
+      expect(exam.sections.length).toBeGreaterThan(0);
+    }
+  });
+
   it("leaves all other calculator content explicitly pending for follow-up", () => {
-    const prioritized = new Set(["kdv-hesaplama", "yuzde-hesaplama", "maas-zam-artis-hesaplama", "not-ortalamasi-gano-hesaplama", "birim-donusturme", "brut-net-maas-hesaplama"]);
+    const completed = new Set([
+      "kdv-hesaplama", "yuzde-hesaplama", "maas-zam-artis-hesaplama",
+      "not-ortalamasi-gano-hesaplama", "birim-donusturme", "brut-net-maas-hesaplama",
+      ...regulatedTools.map((tool) => tool.id),
+      ...educationHealthTools.map((tool) => tool.id)
+    ]);
     const todoTools = tools.filter((tool) => !tool.content);
-    expect(todoTools).toHaveLength(tools.length - prioritized.size);
-    expect(todoTools.every((tool) => !prioritized.has(tool.id))).toBe(true);
+    expect(todoTools).toHaveLength(tools.length - completed.size);
+    expect(todoTools.every((tool) => !completed.has(tool.id))).toBe(true);
   });
 
   it("removes merged tool URLs from the catalogue and maps legacy paths to replacements", () => {
@@ -189,15 +257,60 @@ describe("calculator catalog", () => {
     expect(adsTxt).toBe("google.com, pub-6994844378081796, DIRECT, f08c47fec0942fa0");
   });
 
+  it("documents current privacy practices and provides working contact and reporting paths", () => {
+    const calculatorPage = readFileSync(new URL("../app/[slug]/page.tsx", import.meta.url), "utf8");
+    const contactPage = readFileSync(new URL("../app/iletisim/page.tsx", import.meta.url), "utf8");
+    const contactForm = readFileSync(new URL("../components/ContactForm.tsx", import.meta.url), "utf8");
+    const privacyPage = readFileSync(new URL("../app/gizlilik-politikasi/page.tsx", import.meta.url), "utf8");
+    const cookiePage = readFileSync(new URL("../app/cerez-politikasi/page.tsx", import.meta.url), "utf8");
+
+    expect(calculatorPage).toContain("Bu araç bilgilendirme amaçlıdır.");
+    expect(calculatorPage).toContain("Hata mı gördünüz? Bildirin");
+    expect(calculatorPage).toContain("tool.medicalDisclaimer || category.id === \"finans\"");
+    expect(contactPage).toContain("<ContactForm />");
+    expect(contactForm).toContain("mailto:${contactEmail}");
+    expect(privacyPage).toContain("şu anda ayrıca bir analitik hizmeti yapılandırılmamıştır");
+    expect(privacyPage).toContain("localStorage");
+    expect(cookiePage).toContain("çerez tercih paneli");
+    expect(cookiePage).toContain("Google AdSense");
+  });
+
+  it("generates a noindex embeddable page for every calculator with attribution and an embed-code dialog", () => {
+    const embedPage = readFileSync(new URL("../app/embed/[slug]/page.tsx", import.meta.url), "utf8");
+    const calculatorPage = readFileSync(new URL("../app/[slug]/page.tsx", import.meta.url), "utf8");
+    const embedButton = readFileSync(new URL("../components/EmbedToolButton.tsx", import.meta.url), "utf8");
+    const layout = readFileSync(new URL("../app/layout.tsx", import.meta.url), "utf8");
+
+    expect(embedPage).toContain("return tools.map((tool) => ({ slug: tool.id }))");
+    expect(embedPage).toContain("robots: { index: false, follow: true }");
+    expect(embedPage).toContain("PratikHesap tarafından");
+    expect(embedPage).toContain('trackUsage={false}');
+    expect(calculatorPage).toContain("<EmbedToolButton");
+    expect(embedButton).toContain("<dialog");
+    expect(embedButton).toContain("navigator.clipboard.writeText(embedCode)");
+    expect(embedButton).toContain('src="${embedUrl}"');
+    expect(layout).toContain("<AdSenseScript />");
+  });
+
   it("generates one canonical sitemap URL for every static page, category, and calculator", () => {
     const entries = sitemap();
     const urls = entries.map((entry) => entry.url);
     expect(entries).toHaveLength(6 + categories.length + tools.length);
     expect(new Set(urls).size).toBe(urls.length);
     expect(urls.every((url) => url.startsWith("https://www.hesappratik.xyz/"))).toBe(true);
+    expect(urls.every((url) => !url.includes("?") && !url.includes("#") && !url.includes("/embed/"))).toBe(true);
     for (const tool of tools) expect(urls).toContain(`https://www.hesappratik.xyz/${tool.id}`);
     expect(urls).toContain("https://www.hesappratik.xyz/kullanim-kosullari");
     expect(urls).toContain("https://www.hesappratik.xyz/cerez-politikasi");
+    const entriesByUrl = new Map(entries.map((entry) => [entry.url, entry]));
+    for (const tool of tools) {
+      const lastModified = tool.updatedAt ?? tool.content?.lastUpdated ?? tool.createdAt?.slice(0, 10);
+      if (lastModified) expect(entriesByUrl.get(`https://www.hesappratik.xyz/${tool.id}`)?.lastModified).toBe(lastModified);
+    }
+    for (const path of ["/hakkimizda", "/iletisim", "/gizlilik-politikasi", "/cerez-politikasi"]) {
+      expect(entriesByUrl.get(`https://www.hesappratik.xyz${path}`)?.lastModified).toBe("2026-11-09");
+    }
+    expect(entriesByUrl.get("https://www.hesappratik.xyz/kullanim-kosullari")?.lastModified).toBe("2026-11-02");
   });
 
   it("publishes crawler rules and a sitemap URL", () => {

@@ -1,4 +1,6 @@
 import { tcmbCurrencies } from "../lib/exchange-rates";
+import { regulatedTools } from "./regulated-tools";
+import { educationHealthTools } from "./education-health-tools";
 
 export type CategoryId = "finans" | "tarih" | "egitim" | "gunluk-yasam";
 export type FieldDefinition = {
@@ -29,7 +31,30 @@ export type CalculatorMode =
   | "unified-gpa"
   | "salary-increase"
   | "salary-payroll"
-  | "unit-conversion";
+  | "unit-conversion"
+  | "severance"
+  | "notice"
+  | "annual-leave"
+  | "rent-increase"
+  | "amortized-loan"
+  | "deposit-interest"
+  | "income-tax"
+  | "stamp-duty"
+  | "title-deed"
+  | "gold-value"
+  | "exam-score-yks"
+  | "exam-score-lgs"
+  | "exam-score-kpss"
+  | "exam-score-ales"
+  | "exam-score-dgs"
+  | "diploma-grade"
+  | "ideal-weight"
+  | "daily-calories"
+  | "daily-water"
+  | "menstrual-calendar"
+  | "hijri-date"
+  | "days-until-date"
+  | "zodiac-sign";
 export type CalculatorPageContent = {
   definition: string;
   steps: string[];
@@ -52,8 +77,10 @@ export type ToolDefinition = {
   fields: FieldDefinition[];
   content?: CalculatorPageContent;
   createdAt?: string;
+  updatedAt?: string;
   mode?: CalculatorMode;
   popular?: boolean;
+  medicalDisclaimer?: boolean;
 };
 export type ToolSummary = Pick<ToolDefinition, "id" | "name" | "category" | "description" | "createdAt">;
 
@@ -389,7 +416,7 @@ const toolCatalog: ToolDefinition[] = [
     fields: [dateField("birthDate", "Doğum tarihi")]
   },
   {
-    id: "gebelik-haftasi-hesaplama", name: "Gebelik haftası hesaplama", category: "gunluk-yasam",
+    id: "gebelik-haftasi-hesaplama", name: "Gebelik haftası hesaplama", category: "gunluk-yasam", medicalDisclaimer: true,
     description: "Son adet tarihine göre yaklaşık gebelik haftasını ve tahmini doğum tarihini bulun.",
     title: "Gebelik Haftası Hesaplama – Son Adet Tarihine Göre | PratikHesap",
     metaDescription: "Son adet tarihinizi girerek yaklaşık gebelik haftanızı ve 280 günlük hesaba dayalı tahmini doğum tarihinizi öğrenin.",
@@ -562,7 +589,7 @@ const toolCatalog: ToolDefinition[] = [
     ]
   },
   {
-    id: "boy-kilo-orani-hesaplama", name: "Boy ve kilo oranı hesaplama", category: "gunluk-yasam",
+    id: "boy-kilo-orani-hesaplama", name: "Boy ve kilo oranı hesaplama", category: "gunluk-yasam", medicalDisclaimer: true,
     description: "Boy ve kilonuza göre vücut kitle indeksi (VKİ) hesaplayın.",
     title: "Boy Kilo Endeksi Hesaplama – VKİ Değerinizi Bulun | PratikHesap",
     metaDescription: "Boy ve kilonuzu girerek vücut kitle indeksinizi (VKİ) hesaplayın. Sonucun genel bilgilendirme amaçlı olduğunu unutmayın.",
@@ -923,7 +950,7 @@ export const legacyCalculatorRedirects: Record<string, string> = {
   "/maas-artis-hesaplama": "/maas-zam-artis-hesaplama"
 };
 const hiddenLegacyIds = new Set(["not-ortalamasi-hesaplama", "ders-ortalamasi-hesaplama", "maas-zam-hesaplama", "maas-artis-hesaplama"]);
-export const tools = toolCatalog.filter((tool) => !hiddenLegacyIds.has(tool.id));
+export const tools = [...toolCatalog, ...regulatedTools, ...educationHealthTools].filter((tool) => !hiddenLegacyIds.has(tool.id));
 
 export const getTool = (slug: string): ToolDefinition | undefined => tools.find((tool) => tool.id === slug);
 export const getCategory = (id: string) => categories.find((category) => category.id === id);

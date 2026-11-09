@@ -4,6 +4,9 @@ import { calculatePayroll } from "./payroll";
 import type { CompletePayrollYearConfig } from "../../data/payroll-config";
 import { tools } from "../../data/tools";
 import { vatQuickRates } from "../../data/calculation-config";
+import { getRegulatedToolTodo, regulatedConfig2026 } from "../../data/regulated-config";
+import { educationHealthConfig2026, getExamConfigTodo } from "../../data/education-health-config";
+import { calculateExamScore } from "./education-health";
 
 const calculatorSamples = {
   "yuzde-hesaplama": { amount: "20", percent: "15" },
@@ -44,7 +47,32 @@ const calculatorSamples = {
   "birim-fiyat-karsilastirma": { productName1: "A", price1: "60", quantity1: "500", unit1: "g", productName2: "B", price2: "110", quantity2: "1", unit2: "kg" },
   "aylik-katkili-birikim-hesaplama": { principal: "1000", contribution: "100", annualRate: "5", months: "12", timing: "end" },
   "yolculuk-maliyeti-hesaplama": { distance: "100", consumption: "7", fuelPrice: "40", journey: "one-way", otherCosts: "0", people: "1" },
-  "desi-hacim-hesaplama": { width: "30", length: "20", height: "10", sizeUnit: "cm", divisor: "3000" }
+  "desi-hacim-hesaplama": { width: "30", length: "20", height: "10", sizeUnit: "cm", divisor: "3000" },
+  "kidem-tazminati-hesaplama": { monthlyGross: "50000", regularBenefits: "5000", startDate: "2023-01-01", endDate: "2024-01-01" },
+  "ihbar-tazminati-hesaplama": { monthlyGross: "30000", startDate: "2023-01-01", endDate: "2023-07-01" },
+  "yillik-izin-ucreti-hesaplama": { monthlyGross: "45000", startDate: "2020-01-01", asOfDate: "2026-01-01", age: "35", usedDays: "14", unusedDays: "6" },
+  "kira-artis-orani-hesaplama": { currentRent: "20000", renewalMonth: "11" },
+  "konut-kredisi-hesaplama": { principal: "1000000", monthlyRate: "2", months: "120", applyKkdf: "no", applyBsmv: "no" },
+  "ihtiyac-kredisi-hesaplama": { principal: "100000", monthlyRate: "3", months: "24", applyKkdf: "yes", applyBsmv: "yes" },
+  "tasit-kredisi-hesaplama": { principal: "500000", monthlyRate: "2.5", months: "48", applyKkdf: "yes", applyBsmv: "yes" },
+  "mevduat-faiz-hesaplama": { principal: "250000", annualRate: "40", days: "92", openingDate: "2026-11-09" },
+  "gelir-vergisi-dilimi-hesaplama": { taxableIncome: "350000", taxYear: "2026" },
+  "damga-vergisi-hesaplama": { documentType: "lease", taxBase: "240000", term: "1" },
+  "tapu-harci-hesaplama": { propertyValue: "5000000", party: "both" },
+  "altin-hesaplama": { gramPrice: "6500", product: "quarter" },
+  "yks-puan-hesaplama": { scoreType: "SAY", tytTurkce: "30", tytSocial: "15", tytMath: "30", tytScience: "15", aytMath: "30", aytScience: "25", aytLiterature: "0", aytSocial: "0", language: "0" },
+  "lgs-puan-hesaplama": { turkish: "15", math: "15", science: "15", history: "8", religion: "8", language: "8" },
+  "kpss-puan-hesaplama": { scoreType: "P3", generalAbility: "35", generalCulture: "40", education: "0", field: "0" },
+  "ales-puan-hesaplama": { scoreType: "EŞİT AĞIRLIK", numerical: "30", verbal: "30" },
+  "dgs-puan-hesaplama": { scoreType: "SAYISAL", numerical: "30", verbal: "25", obp: "60" },
+  "lise-diploma-notu-hesaplama": { grade9: "80", grade10: "82", grade11: "84", grade12: "86" },
+  "ideal-kilo-hesaplama": { height: "170" },
+  "gunluk-kalori-ihtiyaci-hesaplama": { age: "30", sex: "female", height: "165", weight: "60", activity: "1.55" },
+  "gunluk-su-ihtiyaci-hesaplama": { weight: "70", mlPerKg: "30" },
+  "yumurtlama-adet-takvimi-hesaplama": { lastPeriod: "2026-10-01", cycleLength: "28", periodLength: "5" },
+  "hicri-takvim-cevirme": { date: "2026-11-09" },
+  "tarihe-kac-gun-kaldi-hesaplama": { targetDate: "2026-11-10" },
+  "burc-hesaplama": { birthDate: "1990-12-15" }
 };
 
 const payrollTestConfig: CompletePayrollYearConfig = {
@@ -255,6 +283,139 @@ describe("education and daily-life calculators", () => {
     expect(() => calculate("dortluk-not-sistemi-hesaplama", { grade1: "__proto__", credit1: "1" })).toThrow(/harf notu/);
   });
 
+  it("calculates the new employment, tax, loan, housing, and gold tools with supplied test-only parameters", () => {
+      const config = regulatedConfig2026;
+      const original = {
+        ceiling: config.severance.ceiling.value,
+        cpi: config.rentIncrease.latestCpi12MonthAverage.value,
+        loans: {
+          konut: { ...config.loans.konut },
+          ihtiyac: { ...config.loans.ihtiyac },
+          tasit: { ...config.loans.tasit }
+        },
+        deposits: [...config.deposit.withholdingByMaturity],
+        brackets: config.incomeTax.salaryBrackets,
+        stampRates: { ...config.stampDuty.ratesByDocument },
+        stampCaps: { ...config.stampDuty.ceilingsByDocument },
+        gold: { ...config.gold.productWeights }
+      };
+      try {
+        config.severance.ceiling.value = 100000;
+        config.rentIncrease.latestCpi12MonthAverage.value = 10;
+        config.loans.konut.kkdf = 0.1;
+        config.loans.konut.bsmv = 0.05;
+        config.loans.ihtiyac.kkdf = 0.1;
+        config.loans.ihtiyac.bsmv = 0.05;
+        config.loans.tasit.kkdf = 0.1;
+        config.loans.tasit.bsmv = 0.05;
+        config.deposit.withholdingByMaturity = [{ minDays: 1, maxDays: null, rate: 0.15, effectiveFrom: "2020-01-01", effectiveTo: null }];
+        config.incomeTax.salaryBrackets = [{ upTo: 1000, rate: 0.1 }, { upTo: null, rate: 0.2 }];
+        config.stampDuty.ratesByDocument = { lease: 0.00189, wage: 0.00759, contract: 0.00948 };
+        config.stampDuty.ceilingsByDocument = { lease: 1000000, wage: 1000000, contract: 1000000 };
+        config.gold.productWeights = { gram: 1, quarter: 1.75, half: 3.5, full: 7 };
+
+        expect(calculate("kidem-tazminati-hesaplama", calculatorSamples["kidem-tazminati-hesaplama"]).value).toBe(55000);
+        expect(calculate("ihbar-tazminati-hesaplama", calculatorSamples["ihbar-tazminati-hesaplama"]).value).toBe(28000);
+        expect(calculate("ihbar-tazminati-hesaplama", {
+          monthlyGross: "30000", startDate: "2023-01-01", endDate: "2023-01-20"
+        }).details?.[0]).toContain("2 hafta");
+        expect(calculate("yillik-izin-ucreti-hesaplama", {
+          monthlyGross: "45000", startDate: "2020-01-01", asOfDate: "2025-01-01", age: "35", usedDays: "14", unusedDays: "0"
+        }).details?.[0]).toContain("14 gün");
+        expect(calculate("yillik-izin-ucreti-hesaplama", {
+          monthlyGross: "45000", startDate: "2020-01-01", asOfDate: "2025-01-02", age: "35", usedDays: "20", unusedDays: "0"
+        }).details?.[0]).toContain("20 gün");
+        const leave = calculate("yillik-izin-ucreti-hesaplama", calculatorSamples["yillik-izin-ucreti-hesaplama"]);
+        expect(leave.value).toBe(9000);
+        expect(leave.details?.[0]).toContain("20 gün");
+        expect(calculate("kira-artis-orani-hesaplama", calculatorSamples["kira-artis-orani-hesaplama"]).value).toBe(22000);
+        const loan = calculate("konut-kredisi-hesaplama", { principal: "1200", monthlyRate: "0", months: "12", applyKkdf: "yes", applyBsmv: "yes" });
+        expect(loan.value).toBe(100);
+        expect(loan.table?.rows).toHaveLength(12);
+        const taxedLoan = calculate("ihtiyac-kredisi-hesaplama", {
+          principal: "1000", monthlyRate: "2", months: "12", applyKkdf: "yes", applyBsmv: "yes"
+        });
+
+        expect(taxedLoan.table?.rows).toHaveLength(12);
+        expect(taxedLoan.table?.rows[0][1]).toBe(taxedLoan.table?.rows[1][1]);
+        expect(taxedLoan.table?.rows[11][6]).toBe("0");
+        expect(calculate("ihtiyac-kredisi-hesaplama", calculatorSamples["ihtiyac-kredisi-hesaplama"]).table?.rows).toHaveLength(24);
+        expect(calculate("tasit-kredisi-hesaplama", calculatorSamples["tasit-kredisi-hesaplama"]).table?.rows).toHaveLength(48);
+        const deposit = calculate("mevduat-faiz-hesaplama", calculatorSamples["mevduat-faiz-hesaplama"]);
+        expect(deposit.value).toBeCloseTo(250000 * 0.4 * 92 / 365 * 0.85);
+        expect(calculate("gelir-vergisi-dilimi-hesaplama", { taxableIncome: "1500", taxYear: "2026" }).value).toBe(200);
+        expect(calculate("damga-vergisi-hesaplama", calculatorSamples["damga-vergisi-hesaplama"]).value).toBeCloseTo(453.6);
+        expect(calculate("tapu-harci-hesaplama", calculatorSamples["tapu-harci-hesaplama"]).value).toBe(200000);
+        expect(calculate("altin-hesaplama", calculatorSamples["altin-hesaplama"]).value).toBe(11375);
+
+        expect(() => calculate("ihbar-tazminati-hesaplama", {
+          monthlyGross: "30000", startDate: "2023-07-01", endDate: "2023-01-01"
+        })).toThrow(/sonra olmalıdır/);
+        expect(calculate("yillik-izin-ucreti-hesaplama", {
+          monthlyGross: "45000", startDate: "2020-01-01", asOfDate: "2026-01-01", age: "50", usedDays: "20", unusedDays: "0"
+        }).details?.[0]).toContain("20 gün");
+        expect(() => calculate("yillik-izin-ucreti-hesaplama", {
+          monthlyGross: "45000", startDate: "2020-01-01", asOfDate: "2026-01-01", age: "35", usedDays: "1,5", unusedDays: "0"
+        })).toThrow(/tam sayı/);
+        expect(() => calculate("konut-kredisi-hesaplama", {
+          principal: "1000", monthlyRate: "2", months: "0", applyKkdf: "no", applyBsmv: "no"
+        })).toThrow(/1–1.200/);
+      } finally {
+        config.severance.ceiling.value = original.ceiling;
+        config.rentIncrease.latestCpi12MonthAverage.value = original.cpi;
+        Object.assign(config.loans.konut, original.loans.konut);
+        Object.assign(config.loans.ihtiyac, original.loans.ihtiyac);
+        Object.assign(config.loans.tasit, original.loans.tasit);
+        config.deposit.withholdingByMaturity = original.deposits;
+        config.incomeTax.salaryBrackets = original.brackets;
+        config.stampDuty.ratesByDocument = original.stampRates;
+        config.stampDuty.ceilingsByDocument = original.stampCaps;
+        config.gold.productWeights = original.gold;
+      }
+  });
+
+  it("calculates examination scores only with an explicitly supplied test-year model", () => {
+    const testModel = {
+      year: 2099,
+      source: "Sentetik test modeli",
+      url: "https://example.test",
+      lastUpdated: "2099-01-01",
+      sections: [{ key: "verbal", label: "Sözel net" }, { key: "numerical", label: "Sayısal net" }],
+      scoreTypes: ["EA"],
+      weights: { EA: { verbal: 0.4, numerical: 0.6 } },
+      note: "Yalnızca test."
+    };
+    expect(() => calculate("yks-puan-hesaplama", calculatorSamples["yks-puan-hesaplama"])).toThrow(/katsayıları resmî kılavuzdan doğrulanmadığı/);
+    expect(calculateExamScore({ scoreType: "EA", verbal: "20", numerical: "30" }, "ales", testModel).value).toBe(26);
+    expect(() => calculateExamScore({ scoreType: "EA", verbal: "-1", numerical: "30" }, "ales", testModel)).toThrow(/negatif/);
+    expect(() => calculateExamScore({ scoreType: "EA", verbal: "20", numerical: "30" }, "ales", {
+      ...testModel, weights: { EA: { verbal: 0.4 } }
+    })).toThrow(/ağırlığı/);
+  });
+
+  it("calculates education, health, menstrual, and calendar tools with validation", () => {
+    expect(calculate("lise-diploma-notu-hesaplama", calculatorSamples["lise-diploma-notu-hesaplama"]).value).toBe(83);
+    expect(() => calculate("lise-diploma-notu-hesaplama", { grade9: "101", grade10: "80", grade11: "80", grade12: "80" })).toThrow(/0 ile 100/);
+    const ideal = calculate("ideal-kilo-hesaplama", calculatorSamples["ideal-kilo-hesaplama"]);
+    expect(ideal.details?.[0]).toContain("53,46–71,96");
+    const calories = calculate("gunluk-kalori-ihtiyaci-hesaplama", calculatorSamples["gunluk-kalori-ihtiyaci-hesaplama"]);
+    expect(calories.value).toBeCloseTo((10 * 60 + 6.25 * 165 - 5 * 30 - 161) * 1.55);
+    expect(calculate("gunluk-su-ihtiyaci-hesaplama", calculatorSamples["gunluk-su-ihtiyaci-hesaplama"]).value).toBe(2100);
+    const cycle = calculate("yumurtlama-adet-takvimi-hesaplama", calculatorSamples["yumurtlama-adet-takvimi-hesaplama"]);
+    expect(cycle.details?.[0]).toContain("15.10.2026");
+    expect(cycle.details?.[1]).toContain("10.10.2026 – 16.10.2026");
+    expect(calculate("tarihe-kac-gun-kaldi-hesaplama", { targetDate: "2024-03-01" }, new Date("2024-02-28T15:00:00Z")).value).toBe(2);
+    expect(calculate("burc-hesaplama", calculatorSamples["burc-hesaplama"]).displayValue).toBe("Yay");
+    expect(calculate("hicri-takvim-cevirme", calculatorSamples["hicri-takvim-cevirme"]).displayValue).toMatch(/\d/);
+    expect(() => calculate("yumurtlama-adet-takvimi-hesaplama", {
+      lastPeriod: "2026-02-30", cycleLength: "28", periodLength: "5"
+    })).toThrow(/geçerli bir takvim tarihi/);
+    expect(() => calculate("gunluk-kalori-ihtiyaci-hesaplama", {
+      age: "17", sex: "female", height: "165", weight: "60", activity: "1.55"
+    })).toThrow(/18–120/);
+    expect(() => calculate("gunluk-su-ihtiyaci-hesaplama", { weight: "70", mlPerKg: "0" })).toThrow();
+  });
+
   it("calculates weighted grades and the final exam grade needed", () => {
     expect(calculate("agirlikli-not-ortalamasi-hesaplama", {
       score1: "70", weight1: "40", score2: "80", weight2: "50", score3: "100", weight3: "10"
@@ -342,6 +503,15 @@ describe("education and daily-life calculators", () => {
     for (const tool of tools) {
       if (tool.id === "brut-net-maas-hesaplama") {
         expect(() => calculate(tool.id, calculatorSamples[tool.id as keyof typeof calculatorSamples], new Date("2025-01-01T00:00:00Z"))).toThrow(/doğrulanmamış 2026 bordro parametreleri/);
+        continue;
+      }
+      if (getRegulatedToolTodo(tool.id).length > 0) {
+        expect(() => calculate(tool.id, calculatorSamples[tool.id as keyof typeof calculatorSamples], new Date("2025-01-01T00:00:00Z"))).toThrow(/Resmî parametre doğrulanana kadar/);
+        continue;
+      }
+      const examId = tool.mode?.startsWith("exam-score-") ? tool.mode.slice("exam-score-".length) as keyof typeof educationHealthConfig2026.exams : undefined;
+      if (examId && getExamConfigTodo(educationHealthConfig2026.exams[examId]).length > 0) {
+        expect(() => calculate(tool.id, calculatorSamples[tool.id as keyof typeof calculatorSamples], new Date("2025-01-01T00:00:00Z"))).toThrow(/katsayıları resmî kılavuzdan doğrulanmadığı/);
         continue;
       }
       const result = calculate(tool.id, calculatorSamples[tool.id as keyof typeof calculatorSamples], new Date("2025-01-01T00:00:00Z"));

@@ -1,6 +1,29 @@
 import { unitGroups } from "./units";
 import { getPayrollConfigTodo, isCompletePayrollConfig, payrollConfigs } from "../../data/payroll-config";
 import { calculatePayroll } from "./payroll";
+import {
+  calculateAmortizedLoan,
+  calculateAnnualLeave,
+  calculateDepositInterest,
+  calculateGoldValue,
+  calculateIncomeTax,
+  calculateNotice,
+  calculateRentIncrease,
+  calculateSeverance,
+  calculateStampDuty,
+  calculateTitleDeed
+} from "./regulated";
+import {
+  calculateDailyCalories,
+  calculateDailyWater,
+  calculateDaysUntilDate,
+  calculateDiplomaGrade,
+  calculateExamScore as calculateConfiguredExamScore,
+  calculateHijriDate,
+  calculateIdealWeight,
+  calculateMenstrualCalendar,
+  calculateZodiacSign
+} from "./education-health";
 
 export type CalculatorResult = {
   label: string;
@@ -13,7 +36,7 @@ export type CalculatorResult = {
 
 export type CalculatorValues = Record<string, string>;
 
-const requiredNumber = (values: CalculatorValues, key: string, label = key): number => {
+export const requiredNumber = (values: CalculatorValues, key: string, label = key): number => {
   const raw = values[key]?.trim();
   if (!raw) throw new Error(`${label} alanını doldurun.`);
   const value = parseTurkishNumber(raw);
@@ -56,7 +79,7 @@ const dateValue = (values: CalculatorValues, key: string, label: string): Date =
   return parseDate(value, label);
 };
 
-const result = (label: string, value: number, unit?: string, details?: string[]): CalculatorResult => {
+export const result = (label: string, value: number, unit?: string, details?: string[]): CalculatorResult => {
   if (!Number.isFinite(value)) throw new Error("Bu değerlerle sonuç hesaplanamıyor. Girdilerinizi kontrol edin.");
   return { label, value, unit, details };
 };
@@ -901,7 +924,32 @@ const calculators: Record<string, Calculator> = {
   "birim-fiyat-karsilastirma": calculateUnitPriceComparison,
   "aylik-katkili-birikim-hesaplama": calculateMonthlySavings,
   "yolculuk-maliyeti-hesaplama": calculateTripCost,
-  "desi-hacim-hesaplama": calculateDimensionalWeight
+  "desi-hacim-hesaplama": calculateDimensionalWeight,
+  "kidem-tazminati-hesaplama": calculateSeverance,
+  "ihbar-tazminati-hesaplama": calculateNotice,
+  "yillik-izin-ucreti-hesaplama": calculateAnnualLeave,
+  "kira-artis-orani-hesaplama": calculateRentIncrease,
+  "konut-kredisi-hesaplama": (values) => calculateAmortizedLoan(values, "konut"),
+  "ihtiyac-kredisi-hesaplama": (values) => calculateAmortizedLoan(values, "ihtiyac"),
+  "tasit-kredisi-hesaplama": (values) => calculateAmortizedLoan(values, "tasit"),
+  "mevduat-faiz-hesaplama": calculateDepositInterest,
+  "gelir-vergisi-dilimi-hesaplama": calculateIncomeTax,
+  "damga-vergisi-hesaplama": calculateStampDuty,
+  "tapu-harci-hesaplama": calculateTitleDeed,
+  "altin-hesaplama": calculateGoldValue,
+  "yks-puan-hesaplama": (values) => calculateConfiguredExamScore(values, "yks"),
+  "lgs-puan-hesaplama": (values) => calculateConfiguredExamScore(values, "lgs"),
+  "kpss-puan-hesaplama": (values) => calculateConfiguredExamScore(values, "kpss"),
+  "ales-puan-hesaplama": (values) => calculateConfiguredExamScore(values, "ales"),
+  "dgs-puan-hesaplama": (values) => calculateConfiguredExamScore(values, "dgs"),
+  "lise-diploma-notu-hesaplama": calculateDiplomaGrade,
+  "ideal-kilo-hesaplama": calculateIdealWeight,
+  "gunluk-kalori-ihtiyaci-hesaplama": calculateDailyCalories,
+  "gunluk-su-ihtiyaci-hesaplama": calculateDailyWater,
+  "yumurtlama-adet-takvimi-hesaplama": calculateMenstrualCalendar,
+  "hicri-takvim-cevirme": calculateHijriDate,
+  "tarihe-kac-gun-kaldi-hesaplama": calculateDaysUntilDate,
+  "burc-hesaplama": calculateZodiacSign
 };
 
 export function calculate(toolId: string, values: CalculatorValues, now = new Date()): CalculatorResult {

@@ -4,13 +4,17 @@ import { notFound } from "next/navigation";
 import { AdSlot } from "@/components/AdSlot";
 import { Breadcrumb } from "@/components/Breadcrumb";
 import { CalculatorForm } from "@/components/CalculatorForm";
+import { EmbedToolButton } from "@/components/EmbedToolButton";
 import { FavoriteToolButton } from "@/components/ToolActivity";
 import { FAQ } from "@/components/FAQ";
 import { PageStructuredData } from "@/components/PageStructuredData";
 import { categories, getCategory, getTool, tools } from "@/data/tools";
 import { getPayrollConfigTodo, isCompletePayrollConfig, payrollConfigs } from "@/data/payroll-config";
+import { getRegulatedToolTodo } from "@/data/regulated-config";
+import { educationHealthConfig2026, getExamConfigTodo } from "@/data/education-health-config";
 import { getRelatedTools } from "@/data/related-tools";
 import { createPageMetadata } from "@/lib/seo/metadata";
+import { siteUrl } from "@/lib/site";
 
 export function generateStaticParams() {
   return tools.map((tool) => ({ slug: tool.id }));
@@ -52,12 +56,39 @@ export default async function CalculatorPage({ params }: { params: Promise<{ slu
     "monthly-savings": "Başlangıç tutarı, aylık katkı ve varsayımsal oranı girin; süreyi ay olarak belirtin.",
     "trip-cost": "Tek yön mesafesi, tüketim, yakıt fiyatı ve kişi sayısını girin; gidiş-dönüşü ayrıca seçin.",
     "dimensional-weight": "Paket ölçülerini, ölçü birimini ve taşıyıcınızın kullandığı desi bölenini girin.",
-    "salary-payroll": "Aylık veya yıllık brüt/net ücreti, hesaplama yönünü, ayı ve varsa engellilik indirimi derecesini seçin. Tablo 2026 yılı için tam yıl, aynı ücret ve aynı işveren varsayımıyla hazırlanır."
+    "salary-payroll": "Aylık veya yıllık brüt/net ücreti, hesaplama yönünü, ayı ve varsa engellilik indirimi derecesini seçin. Tablo 2026 yılı için tam yıl, aynı ücret ve aynı işveren varsayımıyla hazırlanır.",
+    severance: "Aylık brüt ücret, düzenli ücret ekleri ve hizmet tarihlerini girin.",
+    notice: "Aylık brüt ücret ve işe giriş/ayrılış tarihlerini girin.",
+    "annual-leave": "Aylık brüt ücret, işe giriş ve izin/ayrılış tarihlerini, yaşı ve iki izin günü bilgisini ayrı ayrı girin.",
+    "rent-increase": "Mevcut kira tutarı ile yenileme ayını belirtin; yalnızca o aya ait doğrulanmış TÜİK verisi kullanılabilir.",
+    "amortized-loan": "Kredi anaparası, aylık faiz oranı, vade ve vergi seçeneklerini girin; aylık amortisman tablosu oluşturulur.",
+    "deposit-interest": "TL mevduat anaparası, yıllık brüt faiz oranı, vade ve açılış/yenileme tarihini girin.",
+    "income-tax": "Ücret bordrosundaki kümülatif vergi matrahını ve tarife yılını girin.",
+    "stamp-duty": "Belge türünü, belge tutarını ve gerekiyorsa kira sözleşmesi süresini girin.",
+    "title-deed": "Satış işleminde harca esas bedeli ve görmek istediğiniz taraf payını seçin.",
+    "gold-value": "Güvendiğiniz kaynaktaki gram altın fiyatını girin ve ürün türünü seçin.",
+    "exam-score-yks": "Puan türünü seçin ve TYT/AYT/YDT test netlerinizi girin.",
+    "exam-score-lgs": "MEB merkezi sınavındaki altı testin netlerini girin.",
+    "exam-score-kpss": "Puan türünü ve katıldığınız oturumların test netlerini girin.",
+    "exam-score-ales": "Puan türünü seçip sayısal ve sözel test netlerini girin.",
+    "exam-score-dgs": "Puan türünü, sayısal/sözel netleri ve ÖBP bilgisini girin.",
+    "diploma-grade": "9, 10, 11 ve 12. sınıf yıl sonu başarı puanlarını girin.",
+    "ideal-weight": "Boyunuzu santimetre olarak girin.",
+    "daily-calories": "Yaş, boy, ağırlık, denklem seçimi ve aktivite düzeyini girin.",
+    "daily-water": "Ağırlığınızı ve yalnızca hesap örneği için kullanacağınız mL/kg katsayısını girin.",
+    "menstrual-calendar": "Son adet başlangıcını, ortalama döngü gününü ve kanama süresini girin.",
+    "hijri-date": "Çevirmek istediğiniz Miladi tarihi seçin.",
+    "days-until-date": "Kaç gün kaldığını görmek istediğiniz tarihi seçin.",
+    "zodiac-sign": "Doğum tarihinizi seçin."
   };
   const inputDescription = inputInstructions[tool.mode ?? ""] ?? `${fieldLabels.join(", ")} alanlarını doldurun.`;
   const content = tool.content;
   const payrollConfig = tool.mode === "salary-payroll" ? payrollConfigs[2026] : undefined;
   const payrollConfigTodo = payrollConfig ? getPayrollConfigTodo(payrollConfig) : [];
+  const regulatedToolTodo = getRegulatedToolTodo(tool.id);
+  const examId = tool.mode?.startsWith("exam-score-") ? tool.mode.slice("exam-score-".length) as keyof typeof educationHealthConfig2026.exams : undefined;
+  const examConfig = examId ? educationHealthConfig2026.exams[examId] : undefined;
+  const examToolTodo = examConfig ? getExamConfigTodo(examConfig) : [];
 
   return (
     <main className="container-page py-8 sm:py-12">
@@ -70,7 +101,25 @@ export default async function CalculatorPage({ params }: { params: Promise<{ slu
             <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-navy sm:text-4xl">{tool.name}</h1>
             <p className="mt-3 max-w-3xl leading-7 text-slate-600">{tool.intro}</p>
           </header>
-          <FavoriteToolButton toolId={tool.id} tools={toolSummaries} />
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <FavoriteToolButton toolId={tool.id} tools={toolSummaries} />
+            <EmbedToolButton toolId={tool.id} toolName={tool.name} siteUrl={siteUrl} />
+          </div>
+          <aside
+            role="note"
+            className={`mb-5 rounded-2xl border p-4 text-sm leading-6 ${
+              tool.medicalDisclaimer || category.id === "finans"
+                ? "border-amber-300 bg-amber-50 text-amber-950"
+                : "border-blue-200 bg-blue-50 text-navy"
+            }`}
+          >
+            <strong>Bu araç bilgilendirme amaçlıdır.</strong>{" "}
+            {tool.medicalDisclaimer
+              ? "Tıbbi tavsiye, tanı veya tedavi önerisi değildir. Kişisel sağlık durumunuz ve kararlarınız için sağlık uzmanına danışın."
+              : category.id === "finans"
+                ? "Sonuç kişisel finans, vergi veya hukuk danışmanlığı ya da resmî tahakkuk yerine geçmez. Güncel mevzuat ve kendi koşullarınızı yetkili kaynaklardan doğrulayın."
+                : "Sonuç, açıklanan yöntem ve girdilerle sınırlı genel bir hesaplamadır; özel durumunuzda ilgili kurum veya yetkili kaynağı esas alın."}
+          </aside>
           {payrollConfig && !isCompletePayrollConfig(payrollConfig) ? (
             <aside role="status" className="rounded-2xl border border-amber-300 bg-amber-50 p-5 text-amber-950">
               <h2 className="text-lg font-bold">2026 bordro parametreleri doğrulanmayı bekliyor</h2>
@@ -82,6 +131,19 @@ export default async function CalculatorPage({ params }: { params: Promise<{ slu
               </ul>
               <p className="mt-3 text-sm leading-6">
                 Kaynaklarda doğrulanan parametreler yapılandırmada tutulur; eksikler doğrulandığında araç otomatik olarak etkinleştirilecektir.
+              </p>
+            </aside>
+          ) : regulatedToolTodo.length > 0 || examToolTodo.length > 0 ? (
+            <aside role="status" className="rounded-2xl border border-amber-300 bg-amber-50 p-5 text-amber-950">
+              <h2 className="text-lg font-bold">Resmî parametre doğrulanmayı bekliyor</h2>
+              <p className="mt-2 leading-6">
+                Yanlış veya eski oran göstermemek için bu hesaplama geçici olarak kapalıdır. Aşağıdaki değerler birincil kaynakta doğrulanınca araç etkinleştirilecektir:
+              </p>
+              <ul className="mt-3 list-disc space-y-1 pl-5">
+                {[...regulatedToolTodo, ...examToolTodo].map((item) => <li key={item}>{item}</li>)}
+              </ul>
+              <p className="mt-3 text-sm leading-6">
+                Kaynak ve yürürlük tarihi <Link href="/finans" className="font-semibold underline">finans araçları</Link> sayfalarındaki açıklamalarda gösterilir.
               </p>
             </aside>
           ) : (
@@ -169,6 +231,16 @@ export default async function CalculatorPage({ params }: { params: Promise<{ slu
             ) : (
               <p className="mt-3 leading-7 text-slate-600">TODO: İçerik gözden geçirme tarihi ve doğrulanmış kaynak listesi eklenmeli.</p>
             )}
+          </section>
+          <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-5" aria-labelledby="report-error-title">
+            <h2 id="report-error-title" className="font-bold text-navy">Hata mı gördünüz? Bildirin</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">Bu araçtaki sonuç, formül veya kaynakla ilgili bir sorun fark ettiyseniz bize iletin.</p>
+            <a
+              href={`mailto:ahmet.tulum99@gmail.com?subject=${encodeURIComponent(`[PratikHesap] Hata bildirimi: ${tool.name}`)}&body=${encodeURIComponent(`Araç: ${tool.name}\nBağlantı: ${siteUrl}/${tool.id}\n\nHata açıklaması:\n`)}`}
+              className="mt-3 inline-block font-semibold text-blue underline"
+            >
+              Hata mı gördünüz? Bildirin
+            </a>
           </section>
         </div>
         <aside className="rounded-2xl border border-slate-200 bg-white p-5 lg:sticky lg:top-6">
