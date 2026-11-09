@@ -117,9 +117,24 @@ try {
   assert.equal(new Set(locations).size, locations.length, "Sitemap contains duplicate URLs");
   assert.deepEqual([...locations].sort(), expectedPaths, "Sitemap URLs must match generated public page routes");
 
+  for (let index = 0; index < locations.length; index += 8) {
+    const pageResponses = await Promise.all(locations.slice(index, index + 8).map(async (pathname) => {
+      const response = await fetch(`${baseUrl}${pathname}`, { redirect: "manual" });
+      const body = await response.text();
+      assert.equal(response.status, 200, `Sitemap page must return HTTP 200: ${pathname}`);
+      assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i, `Sitemap URL must resolve to HTML: ${pathname}`);
+      assert.doesNotMatch(response.headers.get("x-robots-tag") ?? "", /noindex/i, `Sitemap page has X-Robots-Tag noindex: ${pathname}`);
+      assert.doesNotMatch(body, /<meta\s+name=["']robots["'][^>]*content=["'][^"']*noindex/i, `Sitemap page has a noindex meta tag: ${pathname}`);
+      return pathname;
+    }));
+    assert.equal(pageResponses.length, locations.slice(index, index + 8).length);
+  }
+
   assert.equal(robotsResponse.status, 200, "robots.txt route must return HTTP 200 without redirects");
   assert.match(robotsResponse.headers.get("content-type") ?? "", /^text\/plain\b/i);
   assert.match(robots, /^User-Agent: \*\r?\nAllow: \//m);
+  assert.match(robots, /^Disallow: \/api\/$/m);
+  assert.match(robots, /^Disallow: \/embed\/$/m);
   assert.doesNotMatch(robots, /^\s*Disallow:\s*\/\s*$/m);
   assert.match(robots, new RegExp(`^Sitemap: ${canonicalOrigin.replaceAll(".", "\\.")}/sitemap\\.xml$`, "m"));
 

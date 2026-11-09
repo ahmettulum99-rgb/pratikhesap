@@ -304,8 +304,7 @@ describe("calculator catalog", () => {
     expect(urls).toContain("https://www.hesappratik.xyz/cerez-politikasi");
     const entriesByUrl = new Map(entries.map((entry) => [entry.url, entry]));
     for (const tool of tools) {
-      const lastModified = tool.updatedAt ?? tool.content?.lastUpdated ?? tool.createdAt?.slice(0, 10);
-      if (lastModified) expect(entriesByUrl.get(`https://www.hesappratik.xyz/${tool.id}`)?.lastModified).toBe(lastModified);
+      expect(entriesByUrl.get(`https://www.hesappratik.xyz/${tool.id}`)?.lastModified).toBe(tool.updatedAt);
     }
     for (const path of ["/hakkimizda", "/iletisim", "/gizlilik-politikasi", "/cerez-politikasi"]) {
       expect(entriesByUrl.get(`https://www.hesappratik.xyz${path}`)?.lastModified).toBe("2026-11-09");
@@ -316,6 +315,7 @@ describe("calculator catalog", () => {
   it("publishes crawler rules and a sitemap URL", () => {
     const source = readFileSync(new URL("../app/robots.ts", import.meta.url), "utf8");
     expect(source).toContain('allow: "/"');
+    expect(source).toContain('disallow: ["/api/", "/embed/"]');
     expect(source).toContain("`${siteUrl}/sitemap.xml`");
   });
 });
