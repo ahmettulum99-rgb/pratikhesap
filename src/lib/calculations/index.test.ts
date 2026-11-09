@@ -1,30 +1,33 @@
 import { describe, expect, it } from "vitest";
 import { calculate, formatTurkishNumber, parseDate, parseTurkishNumber } from "./index";
+import { calculatePayroll } from "./payroll";
+import type { CompletePayrollYearConfig } from "../../data/payroll-config";
 import { tools } from "../../data/tools";
+import { vatQuickRates } from "../../data/calculation-config";
 
 const calculatorSamples = {
   "yuzde-hesaplama": { amount: "20", percent: "15" },
-  "maas-zam-hesaplama": { salary: "1000", percent: "10" },
+  "maas-zam-artis-hesaplama": { increaseType: "percent", salary: "1000", percent: "10" },
+  "brut-net-maas-hesaplama": { direction: "gross-to-net", period: "monthly", amount: "50000", month: "1", disabilityDegree: "none" },
   "indirim-hesaplama": { amount: "100", percent: "10" },
   "kdv-hesaplama": { amount: "100", rate: "20" },
   "kar-zarar-hesaplama": { cost: "80", sale: "100" },
-  "maas-artis-hesaplama": { salary: "1000", increase: "100" },
   "yas-hesaplama": { birthDate: "2000-01-01" },
   "iki-tarih-arasi-gun-hesaplama": { startDate: "2025-01-01", endDate: "2025-01-02" },
   "tarihe-gun-ekleme": { date: "2025-01-01", days: "1" },
   "tarihten-gun-cikarma": { date: "2025-01-02", days: "1" },
   "dogum-gunune-kalan-sure": { birthDate: "2000-01-01" },
   "gebelik-haftasi-hesaplama": { lastPeriod: "2024-01-01" },
-  "not-ortalamasi-hesaplama": { grade1: "70", grade2: "80", grade3: "90" },
+  "not-ortalamasi-gano-hesaplama": { gradeSystem: "4", gradeEntry: "letter", courseName1: "A", grade1: "AA", credit1: "3" },
   "sinav-puani-hesaplama": { correct: "7", wrong: "1", total: "10", wrongPenalty: "4" },
   "basari-yuzdesi-hesaplama": { achieved: "5", total: "10" },
   "harf-notu-hesaplama": { grade: "70" },
-  "ders-ortalamasi-hesaplama": { averageMode: "equal", courseName1: "A", grade1: "70", courseName2: "B", grade2: "80", courseName3: "C", grade3: "90" },
-  "metrekare-hesaplama": { width: "2", length: "3" },
+  "metrekare-hesaplama": { shape: "rectangle", width: "2", length: "3" },
   "boy-kilo-orani-hesaplama": { height: "170", weight: "65" },
   "litre-donusumu": { amount: "1", conversion: "ml-to-l" },
   "kilogram-donusumu": { amount: "1", conversion: "kg-to-g" },
   "saat-dakika-donusturme": { amount: "1", conversion: "hours-to-minutes" },
+  "birim-donusturme": { category: "length", amount: "2", fromUnit: "km", toUnit: "m" },
   "dortluk-not-sistemi-hesaplama": { courseName1: "A", grade1: "AA", credit1: "1" },
   "agirlikli-not-ortalamasi-hesaplama": {
     assessmentName1: "Vize", score1: "70", weight1: "40", assessmentName2: "Final", score2: "80", weight2: "50", assessmentName3: "Ödev", score3: "90", weight3: "10"
@@ -43,6 +46,51 @@ const calculatorSamples = {
   "yolculuk-maliyeti-hesaplama": { distance: "100", consumption: "7", fuelPrice: "40", journey: "one-way", otherCosts: "0", people: "1" },
   "desi-hacim-hesaplama": { width: "30", length: "20", height: "10", sizeUnit: "cm", divisor: "3000" }
 };
+
+const payrollTestConfig: CompletePayrollYearConfig = {
+  year: 2099,
+  lastUpdated: "2099-01-01",
+  minimumWage: {
+    grossMonthly: 10000,
+    source: { name: "Test", url: "https://example.test", reference: "Yalnızca test verisi." }
+  },
+  socialSecurity: {
+    baseFloor: 10000,
+    baseCeiling: 1000000,
+    employeeRate: 0.14,
+    employerRate: 0.2175,
+    employeeUnemploymentRate: 0.01,
+    employerUnemploymentRate: 0.02,
+    source: { name: "Test", url: "https://example.test", reference: "Yalnızca test verisi." }
+  },
+  incomeTax: {
+    brackets: [
+      { upTo: 100000, rate: 0.15 },
+      { upTo: 400000, rate: 0.2 },
+      { upTo: 1000000, rate: 0.27 },
+      { upTo: null, rate: 0.35 }
+    ],
+    minimumWageExemptionMethodVerified: true,
+    disabilityMonthlyDeduction: { "1": 3000, "2": 2000, "3": 1000 },
+    source: { name: "Test", url: "https://example.test", reference: "Yalnızca test verisi." },
+    disabilitySource: { name: "Test", url: "https://example.test", reference: "Yalnızca test verisi." }
+  },
+  stampTax: {
+    rate: 0.00759,
+    source: { name: "Test", url: "https://example.test", reference: "Yalnızca test verisi." }
+  }
+};
+
+function calculateTestPayroll(overrides: Partial<Parameters<typeof calculatePayroll>[0]> = {}) {
+  return calculatePayroll({
+    amount: 50000,
+    direction: "gross-to-net",
+    period: "monthly",
+    month: 1,
+    disabilityDegree: "none",
+    ...overrides
+  }, payrollTestConfig);
+}
 
 describe("Turkish number helpers", () => {
   it("parses comma decimals and grouped thousands", () => {
@@ -63,25 +111,64 @@ describe("Turkish number helpers", () => {
 describe("financial calculators", () => {
   it("calculates percentage and discount with decimal values", () => {
     expect(calculate("yuzde-hesaplama", { amount: "1.200,50", percent: "12,5" }).value).toBeCloseTo(150.0625);
+    expect(calculate("yuzde-hesaplama", { operation: "difference", start: "40", end: "60" }).value).toBe(40);
+    expect(() => calculate("yuzde-hesaplama", { operation: "difference", start: "0", end: "0" })).toThrow(/sıfır/);
     expect(calculate("indirim-hesaplama", { amount: "1000", percent: "25" }).value).toBe(750);
   });
 
   it("calculates salary, VAT, and loss", () => {
-    expect(calculate("maas-zam-hesaplama", { salary: "30000", percent: "20" }).value).toBe(36000);
+    expect(calculate("maas-zam-artis-hesaplama", { increaseType: "percent", salary: "30000", percent: "20" }).value).toBe(36000);
+    expect(calculate("maas-zam-artis-hesaplama", { increaseType: "fixed", salary: "30000", increase: "5000" }).value).toBe(35000);
     expect(calculate("kdv-hesaplama", { amount: "1000", rate: "20" }).value).toBe(1200);
     expect(calculate("kdv-hesaplama", { amount: "1200", rate: "20", direction: "included-to-excluded" }).value).toBe(1000);
     expect(calculate("kdv-hesaplama", { amount: "1200", rate: "0", direction: "included-to-excluded" }).value).toBe(1200);
     expect(() => calculate("kdv-hesaplama", { amount: "100", rate: "20", direction: "unexpected" })).toThrow(/yönü/);
     expect(calculate("kar-zarar-hesaplama", { cost: "100", sale: "80" }).value).toBe(20);
     expect(calculate("kar-zarar-hesaplama", { cost: "0", sale: "80" }).details?.[0]).toMatch(/hesaplanamaz/);
-    expect(calculate("maas-artis-hesaplama", { salary: "0", increase: "500" }).details?.[0]).toMatch(/hesaplanamaz/);
+    expect(calculate("maas-zam-artis-hesaplama", { increaseType: "fixed", salary: "0", increase: "500" }).details?.[1]).toMatch(/hesaplanamaz/);
+  });
+
+  it("calculates a 12-month gross-to-net payroll with separate statutory deductions", () => {
+    const payroll = calculateTestPayroll({ amount: 100000, month: 12 });
+    expect(payroll.label).toBe("Tahmini net maaş");
+    expect(payroll.value).toBeGreaterThan(0);
+    expect(payroll.table?.rows).toHaveLength(12);
+    expect(payroll.table?.rows[11][0]).toBe("Aralık");
+    expect(payroll.details?.some((detail) => detail.includes("SGK işçi payı"))).toBe(true);
+    expect(payroll.details?.some((detail) => detail.includes("işveren maliyeti"))).toBe(true);
+  });
+
+  it("applies cumulative income-tax bands so a later month can have a lower net", () => {
+    const january = calculateTestPayroll({ amount: 100000, month: 1 });
+    const december = calculateTestPayroll({ amount: 100000, month: 12 });
+    expect(december.value).toBeLessThan(january.value);
+  });
+
+  it("distributes annual input over twelve months", () => {
+    const monthly = calculateTestPayroll({ amount: 100000, month: 5 });
+    const annual = calculateTestPayroll({ amount: 1200000, period: "annual", month: 5 });
+    expect(annual.value).toBe(monthly.value);
+  });
+
+  it("solves a gross amount for a target net throughout the year", () => {
+    const payroll = calculateTestPayroll({ direction: "net-to-gross", amount: 30000, month: 8 });
+    expect(payroll.label).toBe("Tahmini brüt maaş");
+    for (const row of payroll.table!.rows) expect(Number(row[9].replace(/\./g, "").replace(",", "."))).toBeCloseTo(30000, 0);
+  });
+
+  it("applies the selected disability deduction and validates payroll inputs", () => {
+    const withoutDeduction = calculateTestPayroll({ amount: 60000, month: 1 });
+    const withDeduction = calculateTestPayroll({ amount: 60000, month: 1, disabilityDegree: "1" });
+    expect(withDeduction.value).toBeGreaterThan(withoutDeduction.value);
+    expect(() => calculateTestPayroll({ amount: -1 })).toThrow(/sıfırdan büyük/);
+    expect(() => calculateTestPayroll({ month: 13 })).toThrow(/1 ile 12/);
   });
 
   it("supports zero values and rejects invalid amounts", () => {
     expect(calculate("yuzde-hesaplama", { amount: "0", percent: "15" }).value).toBe(0);
     expect(calculate("yuzde-hesaplama", { amount: "999999999999999", percent: "100" }).value).toBe(999999999999999);
     expect(() => calculate("indirim-hesaplama", { amount: "10", percent: "101" })).toThrow();
-    expect(() => calculate("maas-artis-hesaplama", { salary: "-1", increase: "5" })).toThrow();
+    expect(() => calculate("maas-zam-artis-hesaplama", { increaseType: "fixed", salary: "-1", increase: "5" })).toThrow();
     expect(() => calculate("yuzde-hesaplama", { amount: "", percent: "5" })).toThrow(/doldurun/);
     expect(() => calculate("kdv-hesaplama", { amount: "1e999", rate: "20" })).toThrow();
   });
@@ -115,13 +202,21 @@ describe("date calculators", () => {
 describe("education and daily-life calculators", () => {
   it("calculates score, averages, and percentages", () => {
     expect(calculate("sinav-puani-hesaplama", { correct: "30", wrong: "4", total: "40", wrongPenalty: "4" }).details?.[0]).toContain("72,5");
-    expect(calculate("not-ortalamasi-hesaplama", { grade1: "70", grade2: "90" }).value).toBe(80);
+    expect(calculate("not-ortalamasi-gano-hesaplama", {
+      gradeSystem: "4", gradeEntry: "letter", grade1: "AA", credit1: "3", grade2: "BB", credit2: "1"
+    }).value).toBe(3.75);
+    expect(calculate("not-ortalamasi-gano-hesaplama", {
+      gradeSystem: "100", grade1: "80", credit1: "3", grade2: "70", credit2: "1"
+    }).value).toBe(77.5);
+    expect(calculate("not-ortalamasi-gano-hesaplama", {
+      gradeSystem: "4", gradeEntry: "score", grade1: "3,5", credit1: "2"
+    }).value).toBe(3.5);
     expect(calculate("basari-yuzdesi-hesaplama", { achieved: "0", total: "10" }).value).toBe(0);
     expect(calculate("harf-notu-hesaplama", { grade: "90" }).displayValue).toBe("AA");
   });
 
   it("validates grade ranges and exam totals", () => {
-    expect(() => calculate("not-ortalamasi-hesaplama", { grade1: "101", grade2: "90" })).toThrow();
+    expect(() => calculate("not-ortalamasi-gano-hesaplama", { gradeSystem: "100", grade1: "101", credit1: "1" })).toThrow();
     expect(() => calculate("sinav-puani-hesaplama", { correct: "8", wrong: "4", total: "10", wrongPenalty: "4" })).toThrow();
     expect(() => calculate("basari-yuzdesi-hesaplama", { achieved: "11", total: "10" })).toThrow();
   });
@@ -132,6 +227,16 @@ describe("education and daily-life calculators", () => {
     expect(calculate("litre-donusumu", { amount: "2,5", conversion: "l-to-ml" }).value).toBe(2500);
     expect(calculate("kilogram-donusumu", { amount: "1,5", conversion: "kg-to-g" }).value).toBe(1500);
     expect(calculate("saat-dakika-donusturme", { amount: "1,5", conversion: "hours-to-minutes" }).value).toBe(90);
+    expect(calculate("birim-donusturme", { category: "length", amount: "2,5", fromUnit: "km", toUnit: "m" }).value).toBe(2500);
+    expect(calculate("birim-donusturme", { category: "temperature", amount: "20", fromUnit: "c", toUnit: "f" }).value).toBe(68);
+    expect(calculate("birim-donusturme", { category: "time", amount: "2", fromUnit: "hour", toUnit: "min" }).value).toBe(120);
+    expect(() => calculate("birim-donusturme", { category: "length", amount: "2", fromUnit: "km", toUnit: "kg" })).toThrow(/uygun/);
+    expect(vatQuickRates).toEqual([1, 10, 20]);
+    expect(calculate("metrekare-hesaplama", { shape: "square", side: "4" }).value).toBe(16);
+    expect(calculate("metrekare-hesaplama", { shape: "triangle", base: "3", height: "2" }).value).toBe(3);
+    expect(calculate("metrekare-hesaplama", { shape: "circle", radius: "2" }).value).toBeCloseTo(Math.PI * 4);
+    expect(calculate("metrekare-hesaplama", { shape: "trapezoid", base: "4", upperBase: "2", height: "3" }).value).toBe(9);
+    expect(() => calculate("metrekare-hesaplama", { shape: "square", side: "-4" })).toThrow(/sıfırdan büyük/);
     expect(() => calculate("boy-kilo-orani-hesaplama", { height: "0", weight: "65" })).toThrow();
   });
 
@@ -234,6 +339,10 @@ describe("education and daily-life calculators", () => {
   it("has a working calculation for every catalog entry and rejects inherited object keys", () => {
     expect(Object.keys(calculatorSamples).sort()).toEqual(tools.map((tool) => tool.id).sort());
     for (const tool of tools) {
+      if (tool.id === "brut-net-maas-hesaplama") {
+        expect(() => calculate(tool.id, calculatorSamples[tool.id as keyof typeof calculatorSamples], new Date("2025-01-01T00:00:00Z"))).toThrow(/doğrulanmamış 2026 bordro parametreleri/);
+        continue;
+      }
       const result = calculate(tool.id, calculatorSamples[tool.id as keyof typeof calculatorSamples], new Date("2025-01-01T00:00:00Z"));
       expect(Number.isFinite(result.value), tool.id).toBe(true);
     }

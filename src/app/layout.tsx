@@ -1,35 +1,26 @@
 import type { Metadata } from "next";
+import type { Viewport } from "next";
 import type { ReactNode } from "react";
+import Script from "next/script";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { AdSlot } from "@/components/AdSlot";
 import { JsonLd } from "@/components/JsonLd";
 import { adsenseScriptSrc } from "@/lib/ads";
 import { siteUrl } from "@/lib/site";
+import { getOpenGraphImageUrl } from "@/lib/seo/metadata";
+import { homeMetaDescription, homeMetaTitle } from "@/data/home-seo";
 import "./globals.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "PratikHesap – Hesaplamak artık çok kolay",
+    default: homeMetaTitle,
     template: "%s"
   },
-  description: "Finans, tarih, eğitim ve günlük yaşam için ücretsiz, kolay ve hızlı hesaplama araçları.",
-  keywords: [
-    "hesaplama araçları",
-    "ücretsiz hesap makinesi",
-    "çevrimiçi hesaplama",
-    "yüzde hesaplama",
-    "maaş zam hesaplama",
-    "KDV hesaplama",
-    "yaş hesaplama",
-    "not ortalaması hesaplama",
-    "4'lük not sistemi hesaplama",
-    "vize final hesaplama",
-    "tarih hesaplama",
-    "birim dönüştürme"
-  ],
+  description: homeMetaDescription,
   applicationName: "PratikHesap",
+  manifest: "/manifest.webmanifest",
   verification: {
     google: "IrtJCR_0HoQKTJDawAT19KNVGhkNvTABV-nO6cyC6jw"
   },
@@ -41,23 +32,27 @@ export const metadata: Metadata = {
     type: "website",
     locale: "tr_TR",
     siteName: "PratikHesap",
-    title: "PratikHesap – Hesaplamak artık çok kolay",
-    description: "Günlük ihtiyaçlarınız için ücretsiz hesaplama araçları.",
+    title: homeMetaTitle,
+    description: homeMetaDescription,
     url: "/",
     images: [{
-      url: "/og-image.png",
+      url: getOpenGraphImageUrl(homeMetaTitle),
       width: 1200,
       height: 630,
-      alt: "PratikHesap – Hesaplamak artık çok kolay"
+      alt: `${homeMetaTitle} – PratikHesap`
     }]
   },
   twitter: {
     card: "summary_large_image",
-    title: "PratikHesap – Hesaplamak artık çok kolay",
-    description: "Finans, tarih, eğitim ve günlük yaşam için ücretsiz, kolay ve hızlı hesaplama araçları.",
-    images: ["/og-image.png"]
+    title: homeMetaTitle,
+    description: homeMetaDescription,
+    images: [getOpenGraphImageUrl(homeMetaTitle)]
   },
   robots: { index: true, follow: true }
+};
+
+export const viewport: Viewport = {
+  themeColor: "#142B4A"
 };
 
 const structuredData = [
@@ -69,7 +64,15 @@ const structuredData = [
     url: siteUrl,
     description: "Ücretsiz çevrimiçi hesaplama araçları.",
     inLanguage: "tr-TR",
-    publisher: { "@id": `${siteUrl}/#organization` }
+    publisher: { "@id": `${siteUrl}/#organization` },
+    potentialAction: {
+      "@type": "SearchAction",
+      target: {
+        "@type": "EntryPoint",
+        urlTemplate: `${siteUrl}/?ara={search_term_string}`
+      },
+      "query-input": "required name=search_term_string"
+    }
   },
   {
     "@context": "https://schema.org",
@@ -87,8 +90,11 @@ const structuredData = [
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="tr">
+    <html lang="tr" suppressHydrationWarning>
       <head>
+        <Script id="theme-bootstrap" strategy="beforeInteractive">
+          {`try{var t=localStorage.getItem("pratikhesap.theme");var d=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",d);document.documentElement.style.colorScheme=d?"dark":"light"}catch(e){}`}
+        </Script>
         <script async src={adsenseScriptSrc} crossOrigin="anonymous" />
       </head>
       <body>

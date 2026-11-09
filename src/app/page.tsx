@@ -1,12 +1,15 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { ArrowRight, Calculator, CalendarDays, CheckCircle2, GraduationCap, Wallet } from "lucide-react";
 import { ToolExplorer } from "@/components/ToolExplorer";
 import { HomeToolSearch } from "@/components/HomeToolSearch";
+import { ToolActivity } from "@/components/ToolActivity";
 import { FAQ } from "@/components/FAQ";
 import { AdSlot } from "@/components/AdSlot";
 import { PageStructuredData } from "@/components/PageStructuredData";
 import { categories, tools } from "@/data/tools";
 import { getToolKeywords } from "@/data/seo-keywords";
+import { homeSeoParagraphs } from "@/data/home-seo-content";
 
 const categoryIcons = {
   finans: Wallet,
@@ -17,8 +20,7 @@ const categoryIcons = {
 
 export default function HomePage() {
   const popularTools = tools.filter((tool) => tool.popular);
-  const newTools = tools.filter((tool) => tool.isNew);
-  const toolSummaries = tools.map(({ id, name, category, description }) => ({ id, name, category, description }));
+  const toolSummaries = tools.map(({ id, name, category, description, createdAt }) => ({ id, name, category, description, createdAt }));
   const searchableTools = tools.map((tool) => ({
     id: tool.id,
     name: tool.name,
@@ -38,7 +40,9 @@ export default function HomePage() {
             <p className="mt-5 max-w-2xl text-base leading-7 text-blue-100 sm:text-lg sm:leading-8">
               İhtiyacınız olan hesabı bulun, bilgileri girin ve sonucunuzu hemen öğrenin. Ücretsiz, anlaşılır ve kullanımı kolay.
             </p>
-            <HomeToolSearch tools={searchableTools} />
+            <Suspense fallback={<div aria-hidden="true" className="mt-7 h-14 max-w-2xl" />}>
+              <HomeToolSearch tools={searchableTools} />
+            </Suspense>
             <Link href="#araclar" className="hero-button mt-5 gap-2">
               Hesaplama araçlarını keşfet <ArrowRight size={17} aria-hidden="true" />
             </Link>
@@ -52,6 +56,7 @@ export default function HomePage() {
       </section>
 
       <div className="container-page py-10 sm:py-14">
+        <ToolActivity tools={toolSummaries} />
         <section aria-labelledby="popular-heading">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
@@ -93,25 +98,6 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section aria-labelledby="new-tools-heading" className="content-section">
-          <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <p className="eyebrow">Kataloğa eklenenler</p>
-              <h2 id="new-tools-heading" className="section-title mt-2">Yeni hesaplama araçları</h2>
-            </div>
-            <Link href="#araclar" className="text-sm font-semibold text-blue hover:underline">Tüm araçlara git</Link>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {newTools.map((tool) => (
-              <Link key={tool.id} href={`/${tool.id}`} className="tool-card group">
-                <span className="mb-3 inline-flex rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue">Yeni</span>
-                <span className="block font-semibold text-navy group-hover:text-blue">{tool.name}</span>
-                <span className="mt-2 block text-sm leading-6 text-slate-600">{tool.description}</span>
-              </Link>
-            ))}
-          </div>
-        </section>
-
         <AdSlot placement="content" className="my-10" />
 
         <section id="araclar" aria-labelledby="tools-heading" className="scroll-mt-8">
@@ -124,19 +110,17 @@ export default function HomePage() {
         </section>
 
         <section className="content-section rounded-2xl border border-blue-100 bg-white p-6 sm:p-8" aria-labelledby="about-tools-heading">
-          <p className="eyebrow">Basit ve anlaşılır</p>
-          <h2 id="about-tools-heading" className="section-title mt-2">Günlük hesaplamalarınız için pratik bir yardımcı</h2>
-          <p className="mt-4 max-w-4xl leading-7 text-slate-600">
-            PratikHesap; finans, tarih, eğitim ve günlük yaşam konularındaki sık kullanılan hesaplamaları tek yerde toplar. İlgili aracı seçin, istenen bilgileri girin ve açıklamalı sonucunuzu alın. Hesaplamalar tarayıcınızda yapılır; üyelik veya hesap açmanız gerekmez. Eğitim notu, vergi oranı ve benzeri kurum ya da mevzuata bağlı sonuçları ilgili resmî kaynaklardan doğrulamayı unutmayın.
-          </p>
-          <ul className="mt-5 grid gap-3 text-sm text-slate-600 sm:grid-cols-2">
-            {categories.map((category) => (
-              <li key={category.id}>
-                <Link href={category.href} className="font-semibold text-blue hover:underline">{category.name} araçları</Link>
-                <span> — {category.description}</span>
-              </li>
+          <p className="eyebrow">Hesaplama araçları rehberi</p>
+          <h2 id="about-tools-heading" className="section-title mt-2">İhtiyacınıza uygun hesaplama aracını bulun</h2>
+          <div className="mt-4 max-w-4xl space-y-4 leading-7 text-slate-600">
+            {homeSeoParagraphs.map((paragraph, paragraphIndex) => (
+              <p key={paragraphIndex}>
+                {paragraph.map((segment, segmentIndex) => segment.href
+                  ? <Link key={segmentIndex} href={segment.href} className="font-semibold text-blue underline decoration-blue/30 underline-offset-2 hover:decoration-blue">{segment.text}</Link>
+                  : <span key={segmentIndex}>{segment.text}</span>)}
+              </p>
             ))}
-          </ul>
+          </div>
         </section>
 
         <section aria-labelledby="benefits-heading" className="content-section">

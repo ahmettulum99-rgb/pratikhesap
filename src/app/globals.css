@@ -36,6 +36,15 @@ select {
   -webkit-tap-highlight-color: transparent;
 }
 
+button:focus-visible,
+a:focus-visible,
+summary:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid #2878e5;
+  outline-offset: 3px;
+}
+
 ::selection {
   background: #dceaff;
   color: #142b4a;
@@ -52,6 +61,65 @@ select {
   font-size: 0.875rem;
   font-weight: 600;
   transition: color 150ms ease;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.theme-toggle {
+  display: inline-flex;
+  width: 2.75rem;
+  height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.75rem;
+  background: #fff;
+  color: #142b4a;
+}
+
+.pwa-install-wrap {
+  position: relative;
+}
+
+.pwa-install-button {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.75rem;
+  background: #fff;
+  padding: 0.5rem 0.75rem;
+  color: #142b4a;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.pwa-install-button:hover,
+.theme-toggle:hover {
+  background: #eaf2ff;
+}
+
+.pwa-install-message {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 40;
+  width: min(18rem, 85vw);
+  border: 1px solid #cbd5e1;
+  border-radius: 0.75rem;
+  background: #fff;
+  padding: 0.75rem;
+  color: #142b4a;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  box-shadow: 0 2px 8px rgb(20 43 74 / 8%);
 }
 
 .nav-link:hover,
@@ -258,6 +326,37 @@ select {
   color: #fff;
 }
 
+.secondary-button {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.75rem;
+  background: #fff;
+  padding: 0.6rem 1rem;
+  color: #142b4a;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.secondary-button:hover:not(:disabled) {
+  border-color: #2878e5;
+  background: #eaf2ff;
+  color: #174f9d;
+}
+
+.secondary-button:focus-visible {
+  outline: 2px solid #2878e5;
+  outline-offset: 2px;
+}
+
+.secondary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .primary-button {
   display: inline-flex;
   min-height: 3rem;
@@ -277,6 +376,111 @@ select {
   background: #1d63c2;
 }
 
+.dark {
+  color-scheme: dark;
+}
+
+.dark body {
+  background: #0b1220;
+  color: #e2e8f0;
+}
+
+.dark header,
+.dark .bg-white,
+.dark .tool-card,
+.dark .category-card,
+.dark .ad-slot,
+.dark .secondary-button,
+.dark .filter-chip,
+.dark .theme-toggle,
+.dark .pwa-install-button,
+.dark .pwa-install-message {
+  border-color: #334155;
+  background-color: #111c2e;
+  color: #e2e8f0;
+}
+
+.dark .bg-canvas {
+  background-color: #0b1220;
+}
+
+.dark .bg-pale-blue,
+.dark .bg-blue-50,
+.dark .hover\:bg-pale-blue:hover {
+  background-color: #1b2b45;
+}
+
+.dark .border-slate-200,
+.dark .border-slate-300,
+.dark .border-blue-100 {
+  border-color: #334155;
+}
+
+.dark .text-navy,
+.dark .text-slate-700,
+.dark .text-slate-600,
+.dark .text-slate-500,
+.dark .nav-link,
+.dark .mobile-nav-link {
+  color: #dbeafe;
+}
+
+.dark .text-slate-400 {
+  color: #94a3b8;
+}
+
+.dark .text-blue {
+  color: #80b5ff;
+}
+
+.dark .form-input,
+.dark .search-input {
+  border-color: #475569;
+  background-color: #0b1220;
+  color: #f8fafc;
+}
+
+.dark .form-input::placeholder,
+.dark .search-input::placeholder {
+  color: #94a3b8;
+}
+
+.dark .skip-link {
+  background: #111c2e;
+  color: #f8fafc;
+}
+
+.dark .secondary-button:hover:not(:disabled),
+.dark .theme-toggle:hover,
+.dark .pwa-install-button:hover {
+  background: #243a5a;
+  color: #fff;
+}
+
+.dark .tool-card:hover,
+.dark .category-card:hover {
+  border-color: #4b79b7;
+}
+
+.dark .filter-chip-active,
+.dark .primary-button {
+  border-color: #2878e5;
+  background: #2878e5;
+  color: #fff;
+}
+
+.dark .text-red-800 {
+  color: #fecaca;
+}
+
+.dark .bg-red-50 {
+  background-color: #451a1a;
+}
+
+.dark .border-red-200 {
+  border-color: #7f1d1d;
+}
+
 .ad-slot {
   display: grid;
   min-height: 5rem;
@@ -294,5 +498,33 @@ select {
   *::after {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+
+}
+
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+
+  @media (max-width: 420px) {
+    .pwa-install-button span {
+      display: none;
+    }
+  }
+
+  #calculator-result,
+  #calculator-result * {
+    visibility: visible !important;
+  }
+
+  #calculator-result {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    border: 0;
+    background: white !important;
+    color: black !important;
+    box-shadow: none !important;
   }
 }

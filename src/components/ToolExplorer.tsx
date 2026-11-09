@@ -5,6 +5,7 @@ import { Search, SlidersHorizontal } from "lucide-react";
 import type { CategoryId, ToolSummary } from "@/data/tools";
 import { categories } from "@/data/tools";
 import { ToolCard } from "./ToolCard";
+import { normalizeTurkishSearchText } from "@/lib/search";
 
 export function ToolExplorer({
   tools,
@@ -21,8 +22,8 @@ export function ToolExplorer({
   const [category, setCategory] = useState<CategoryId | "tumu">(initialCategory ?? "tumu");
   const filtered = useMemo(() => tools.filter((tool) => {
     const matchesCategory = category === "tumu" || tool.category === category;
-    const searchText = `${tool.name} ${tool.description}`.toLocaleLowerCase("tr-TR");
-    return matchesCategory && searchText.includes(query.trim().toLocaleLowerCase("tr-TR"));
+    const searchText = normalizeTurkishSearchText(`${tool.name} ${tool.description}`);
+    return matchesCategory && searchText.includes(normalizeTurkishSearchText(query.trim()));
   }), [category, query, tools]);
 
   return (

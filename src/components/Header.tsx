@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Calculator, Menu } from "lucide-react";
 import { categories } from "@/data/tools";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { PwaInstall } from "@/components/PwaInstall";
 
 export function Header() {
   return (
@@ -18,6 +20,10 @@ export function Header() {
           <Link href="/hakkimizda" className="nav-link">Hakkımızda</Link>
           <Link href="/iletisim" className="nav-link">İletişim</Link>
         </nav>
+        <div className="header-actions">
+          <ThemeToggle />
+          <PwaInstall />
+        </div>
         <details className="relative lg:hidden">
           <summary className="flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-xl border border-slate-200 text-navy hover:bg-canvas" aria-label="Menüyü aç">
             <Menu size={21} aria-hidden="true" />

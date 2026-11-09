@@ -1,3 +1,7 @@
+import { unitGroups } from "./units";
+import { getPayrollConfigTodo, isCompletePayrollConfig, payrollConfigs } from "../../data/payroll-config";
+import { calculatePayroll } from "./payroll";
+
 export type CalculatorResult = {
   label: string;
   value: number;
@@ -59,6 +63,14 @@ const result = (label: string, value: number, unit?: string, details?: string[])
 
 export function calculatePercentage(values: CalculatorValues): CalculatorResult {
   const operation = values["operation"] || "of";
+  if (operation === "difference") {
+    const first = requiredNumber(values, "start", "Birinci sayı");
+    const second = requiredNumber(values, "end", "İkinci sayı");
+    const averageMagnitude = (Math.abs(first) + Math.abs(second)) / 2;
+    if (averageMagnitude === 0) throw new Error("İki sayı da sıfır olduğunda yüzde fark hesaplanamaz.");
+    const difference = Math.abs(first - second) / averageMagnitude * 100;
+    return result("Yüzde fark", difference, "%", [`|${formatTurkishNumber(first)} − ${formatTurkishNumber(second)}| ÷ (${formatTurkishNumber(averageMagnitude)}) × 100`]);
+  }
   if (operation === "share") {
     const amount = requiredNumber(values, "amount", "Sayı (A)");
     const base = requiredNumber(values, "base", "Taban sayı (B)");
@@ -74,7 +86,7 @@ export function calculatePercentage(values: CalculatorValues): CalculatorResult 
   }
   const amount = requiredNumber(values, "amount", "Sayı");
   const percent = requiredNumber(values, "percent", "Yüzde oranı");
-  if (amount < 0 || percent < 0 || percent > 100) throw new Error("Sayı negatif olamaz; yüzde oranı %0 ile %100 arasında olmalıdır.");
+  if (amount < 0 || percent < 0) throw new Error("Sayı ve yüzde oranı negatif olamaz.");
   if (operation === "add" || operation === "subtract") {
     const delta = amount * percent / 100;
     const value = operation === "add" ? amount + delta : amount - delta;
@@ -130,10 +142,13 @@ export function calculateProfitLoss(values: CalculatorValues): CalculatorResult 
 
 export function calculateSalaryIncrease(values: CalculatorValues): CalculatorResult {
   const salary = requiredNumber(values, "salary", "Mevcut maaş");
-  const increase = requiredNumber(values, "increase", "Artış tutarı");
-  if (salary < 0 || increase < 0) throw new Error("Maaş ve artış tutarı negatif olamaz.");
+  const isPercent = values["increaseType"] === "percent" || (!values["increaseType"] && !values["increase"]);
+  const amount = requiredNumber(values, isPercent ? "percent" : "increase", isPercent ? "Zam oranı" : "Artış tutarı");
+  if (salary < 0 || amount < 0) throw new Error("Maaş ve artış değeri negatif olamaz.");
+  const increase = isPercent ? salary * amount / 100 : amount;
   const percent = salary === 0 ? 0 : increase / salary * 100;
   return result("Yeni maaş", salary + increase, "₺", [
+    `Artış tutarı: ${formatTurkishNumber(increase)} ₺`,
     salary === 0 ? "Mevcut maaş sıfır olduğundan artış oranı hesaplanamaz." : `Artış oranı: %${formatTurkishNumber(percent)}`
   ]);
 }
@@ -277,10 +292,87 @@ export function calculateCourseAverage(values: CalculatorValues): CalculatorResu
 }
 
 export function calculateSquareMeters(values: CalculatorValues): CalculatorResult {
-  const width = requiredNumber(values, "width", "En");
-  const length = requiredNumber(values, "length", "Boy");
-  if (width < 0 || length < 0) throw new Error("Ölçüler negatif olamaz.");
-  return result("Alan", width * length, "m²");
+  const shape = values["shape"] || "rectangle";
+  const positiveMeasure = (key: string, label: string) => {
+    const measure = requiredNumber(values, key, label);
+    if (measure <= 0) throw new Error(`${label} sıfırdan büyük olmalıdır.`);
+    return measure;
+  };
+  let area: number;
+  if (shape === "rectangle") {
+    area = positiveMeasure("width", "En") * positiveMeasure("length", "Boy");
+  } else if (shape === "square") {
+    const side = positiveMeasure("side", "Kenar uzunluğu");
+    area = side * side;
+  } else if (shape === "triangle") {
+    area = positiveMeasure("base", "Taban uzunluğu") * positiveMeasure("height", "Yükseklik") / 2;
+  } else if (shape === "circle") {
+    const radius = positiveMeasure("radius", "Yarıçap");
+    area = Math.PI * radius ** 2;
+  } else if (shape === "trapezoid") {
+    area = (positiveMeasure("base", "Alt taban uzunluğu") + positiveMeasure("upperBase", "Üst taban uzunluğu"))
+      * positiveMeasure("height", "Yükseklik") / 2;
+  } else {
+    throw new Error("Geçerli bir geometrik şekil seçin.");
+  }
+  if (area <= 0) throw new Error("Ölçüler sıfırdan büyük olmalıdır.");
+  return result("Alan", area, "m²", [`Şekil: ${shape === "rectangle" ? "Dikdörtgen" : shape === "square" ? "Kare" : shape === "triangle" ? "Üçgen" : shape === "circle" ? "Daire" : "Yamuk"}.`]);
+}
+
+const letterGradePoints: Record<string, number> = { AA: 4, BA: 3.5, BB: 3, CB: 2.5, CC: 2, DC: 1.5, DD: 1, FD: 0.5, FF: 0 };
+
+export function calculateUnifiedGpa(values: CalculatorValues): CalculatorResult {
+  const count = Math.min(30, Math.max(1, Number(values["_rowCount"] ?? 2)));
+  const system = values["gradeSystem"] === "100" ? "100" : "4";
+  const rows: { name: string; grade: number; credit: number }[] = [];
+  for (let number = 1; number <= count; number++) {
+    const rawGrade = values[`grade${number}`]?.trim() ?? "";
+    const rawCredit = values[`credit${number}`]?.trim() ?? "";
+    if (!rawGrade && !rawCredit) continue;
+    const name = values[`courseName${number}`]?.trim() || `${number}. ders`;
+    if (!rawGrade) throw new Error(`${name}: not alanını doldurun.`);
+    if (!rawCredit) throw new Error(`${name}: kredi alanını doldurun.`);
+    const credit = parseTurkishNumber(rawCredit);
+    if (!Number.isFinite(credit) || credit <= 0) throw new Error(`${name}: kredi sıfırdan büyük olmalıdır.`);
+    const grade = system === "4" && values["gradeEntry"] !== "score"
+      ? letterGradePoints[rawGrade]
+      : parseTurkishNumber(rawGrade);
+    const maximum = system === "4" ? 4 : 100;
+    if (!Number.isFinite(grade) || grade < 0 || grade > maximum) {
+      throw new Error(`${name}: not ${system === "4" ? "0 ile 4" : "0 ile 100"} arasında olmalıdır.`);
+    }
+    rows.push({ name, grade, credit });
+  }
+  if (!rows.length) throw new Error("En az bir ders için kredi ve not girin.");
+  const totalCredits = rows.reduce((sum, row) => sum + row.credit, 0);
+  const average = rows.reduce((sum, row) => sum + row.grade * row.credit, 0) / totalCredits;
+  return result(system === "4" ? "Ağırlıklı genel not ortalaması (GANO)" : "Ağırlıklı not ortalaması", average, system === "4" ? "/ 4,00" : "/ 100", [
+    `${rows.length} ders ve toplam ${formatTurkishNumber(totalCredits)} kredi üzerinden hesaplandı.`,
+    system === "4" ? "Harf notu karşılıkları yaygın örnek değerlerdir; kurumunuzun yönetmeliği farklı olabilir." : "Üniversitenizin kredi, yuvarlama ve değerlendirme kurallarını kontrol edin."
+  ]);
+}
+
+export function calculateUniversalUnitConversion(values: CalculatorValues): CalculatorResult {
+  const amount = requiredNumber(values, "amount", "Miktar");
+  const category = unitGroups.find((group) => group.value === values["category"]);
+  const from = category?.units.find((unit) => unit.value === values["fromUnit"]);
+  const to = category?.units.find((unit) => unit.value === values["toUnit"]);
+  if (!category || !from || !to) throw new Error("Seçilen kategoriye uygun başlangıç ve hedef birimleri seçin.");
+  if (category.value === "temperature") {
+    const absoluteZero = from.value === "k" ? 0 : from.value === "f" ? -459.67 : -273.15;
+    if (amount < absoluteZero) throw new Error("Sıcaklık mutlak sıfırın altında olamaz.");
+  } else if (amount < 0) {
+    throw new Error("Ölçü miktarı negatif olamaz.");
+  }
+  let converted: number;
+  if (category.value === "temperature") {
+    const celsius = from.value === "c" ? amount : from.value === "f" ? (amount - 32) * 5 / 9 : amount - 273.15;
+    converted = to.value === "c" ? celsius : to.value === "f" ? celsius * 9 / 5 + 32 : celsius + 273.15;
+  } else {
+    converted = amount * from.factor / to.factor;
+  }
+  if (!Number.isFinite(converted)) throw new Error("Bu miktar için dönüşüm yapılamıyor.");
+  return result("Dönüştürülmüş değer", converted, to.label, [`${formatTurkishNumber(amount)} ${from.label} = ${formatTurkishNumber(converted)} ${to.label}`]);
 }
 
 export function calculateBmi(values: CalculatorValues): CalculatorResult {
@@ -762,6 +854,21 @@ const calculators: Record<string, Calculator> = {
   "kdv-hesaplama": calculateVat,
   "kar-zarar-hesaplama": calculateProfitLoss,
   "maas-artis-hesaplama": calculateSalaryIncrease,
+  "maas-zam-artis-hesaplama": calculateSalaryIncrease,
+  "brut-net-maas-hesaplama": (values) => {
+    const config = payrollConfigs[2026];
+    if (!config) throw new Error("2026 bordro parametreleri tanımlı değil.");
+    if (!isCompletePayrollConfig(config)) {
+      throw new Error(`Hesaplama doğrulanmamış 2026 bordro parametreleri nedeniyle kullanılamıyor. Eksik resmî veriler: ${getPayrollConfigTodo(config).join("; ")}.`);
+    }
+    return calculatePayroll({
+      amount: requiredNumber(values, "amount", "Maaş tutarı"),
+      direction: values.direction ?? "",
+      period: values.period ?? "",
+      month: requiredNumber(values, "month", "Çalışma ayı"),
+      disabilityDegree: values.disabilityDegree ?? "none"
+    }, config);
+  },
   "yas-hesaplama": calculateAge,
   "iki-tarih-arasi-gun-hesaplama": calculateDateDifference,
   "tarihe-gun-ekleme": calculateAddDays,
@@ -773,7 +880,9 @@ const calculators: Record<string, Calculator> = {
   "basari-yuzdesi-hesaplama": calculateSuccessPercentage,
   "harf-notu-hesaplama": calculateLetterGrade,
   "ders-ortalamasi-hesaplama": calculateCourseAverage,
+  "not-ortalamasi-gano-hesaplama": calculateUnifiedGpa,
   "metrekare-hesaplama": calculateSquareMeters,
+  "birim-donusturme": calculateUniversalUnitConversion,
   "boy-kilo-orani-hesaplama": calculateBmi,
   "litre-donusumu": calculateVolumeConversion,
   "kilogram-donusumu": calculateWeightConversion,

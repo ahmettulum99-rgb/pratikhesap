@@ -25,7 +25,20 @@ export type CalculatorMode =
   | "unit-price"
   | "monthly-savings"
   | "trip-cost"
-  | "dimensional-weight";
+  | "dimensional-weight"
+  | "unified-gpa"
+  | "salary-increase"
+  | "salary-payroll"
+  | "unit-conversion";
+export type CalculatorPageContent = {
+  definition: string;
+  steps: string[];
+  examples: { title: string; calculation: string; result: string }[];
+  referenceTable?: { caption: string; headers: string[]; rows: string[][] };
+  faqs: { question: string; answer: string }[];
+  lastUpdated: string;
+  sources: { name: string; url?: string; note?: string }[];
+};
 export type ToolDefinition = {
   id: string;
   name: string;
@@ -37,11 +50,19 @@ export type ToolDefinition = {
   formula: string;
   example: string;
   fields: FieldDefinition[];
+  content?: CalculatorPageContent;
+  createdAt?: string;
   mode?: CalculatorMode;
   popular?: boolean;
-  isNew?: boolean;
 };
-export type ToolSummary = Pick<ToolDefinition, "id" | "name" | "category" | "description">;
+export type ToolSummary = Pick<ToolDefinition, "id" | "name" | "category" | "description" | "createdAt">;
+
+export function isRecentlyAdded(tool: Pick<ToolDefinition, "createdAt">, now = new Date()): boolean {
+  if (!tool.createdAt) return false;
+  const createdAt = Date.parse(tool.createdAt);
+  const age = now.getTime() - createdAt;
+  return Number.isFinite(createdAt) && age >= 0 && age < 14 * 24 * 60 * 60 * 1000;
+}
 
 export const categories: { id: CategoryId; name: string; href: string; description: string }[] = [
   { id: "finans", name: "Finans", href: "/finans", description: "Bütçe, maaş, vergi ve alışveriş hesaplamaları." },
@@ -77,21 +98,44 @@ const letterGradeOptions = [
   { label: "FF (0,00)", value: "FF" }
 ];
 
-export const tools: ToolDefinition[] = [
+const toolCatalog: ToolDefinition[] = [
   {
     id: "yuzde-hesaplama", name: "Yüzde hesaplama", category: "finans", popular: true,
     description: "Bir tutarın belirli bir yüzdeye karşılık gelen değerini bulun.",
     title: "Yüzde Hesaplama – Bir Sayının Yüzdesini Bulun | PratikHesap",
     metaDescription: "Bir sayının yüzdesini, iki değer arasındaki oranı veya değişimi; yüzde ekleme ve çıkarma işlemlerini tek araçta hesaplayın.",
     intro: "Yüzde aracı beş işlemi destekler: bir sayının yüzdesi, bir değerin başka bir değere oranı, iki değer arasındaki yüzde değişim, yüzde ekleme ve yüzde çıkarma.",
-    formula: "Yüzde tutarı = A × B ÷ 100. Oran = A ÷ B × 100. Değişim = (Bitiş − Başlangıç) ÷ Başlangıç × 100.",
-    example: "2.000'in %15'i 300'dür. 100'den 125'e değişim %25 artıştır; başlangıç sıfırsa yüzde değişim tanımsızdır.",
+    formula: "Yüzde tutarı = A × B ÷ 100. Oran = A ÷ B × 100. Değişim = (Bitiş − Başlangıç) ÷ |Başlangıç| × 100. İki değer arasındaki yüzde fark = |A − B| ÷ ((|A| + |B|) ÷ 2) × 100.",
+    example: "2.000'in %15'i 300'dür. 100'den 125'e değişim %25 artış; 40 ile 60 arasındaki yüzde fark ise %40'tır.",
+    content: {
+      definition: "Yüzde, bir bütünü 100 eşit parçaya ayırdığımızda bu parçalardan kaçının söz konusu olduğunu anlatan bir gösterimdir. “%25” ifadesi, bütünün dörtte biriyle aynı oranı belirtir. Yüzdeler fiyat indirimi ve artışını karşılaştırırken, bir değerin toplam içindeki payını bulurken ya da iki ölçüm arasındaki değişimi ifade ederken kullanılır. Bu hesaplayıcı tek bir işleme bağlı kalmaz: seçilen moda göre bir sayının yüzde tutarını, bir değerin başka bir değerin yüzde kaçı olduğunu, başlangıçtan bitişe yüzde değişimi ve yüzde ekleme veya çıkarma sonrasındaki değeri hesaplar. Her modun istediği girdiler farklı olduğu için önce işlem türünü seçin. Yüzde değişiminde başlangıç değeri referans alınır; başlangıç sıfırsa oran matematiksel olarak tanımsızdır. Araç, para alanlarında görünse de genel sayılarla da kullanılabilir. Sonuç, girilen değerlerin aritmetik karşılığıdır; tek başına fiyat, ücret veya resmî bir oran hakkında hüküm vermez. Karşılaştırma yaparken aynı ölçü birimini ve aynı başlangıç koşullarını kullanmak önemlidir. Bir yüzde tutarı ile yüzde puanı aynı şey değildir: örneğin %20'den %25'e geçiş beş yüzde puanlık, başlangıç oranına göreyse %25'lik göreli artıştır. Aracın değişim modu ikinci türden, başlangıç değerine bağlı hesabı verir. Bu ayrım, anket oranları veya performans verileri yorumlanırken yanlış çıkarım yapmayı önlemeye yardımcı olur.",
+      steps: [
+        "Önce açılır listeden yapmak istediğiniz işlemi seçin; gerekli giriş alanları buna göre görüntülenir.",
+        "İstenen sayı, taban, başlangıç veya bitiş değerlerini girin. Ondalıklar için virgül kullanabilirsiniz.",
+        "Hesapla düğmesine basın. Sonuçla birlikte işlem türüne uygun kısa formül açıklaması gösterilir."
+      ],
+      examples: [
+        { title: "Bir sayının yüzdesini bulma", calculation: "2.400 × 15 ÷ 100", result: "2.400 sayısının %15'i 360'tır." },
+        { title: "Bir değerin toplam içindeki payı", calculation: "45 ÷ 180 × 100", result: "45, 180'in %25'idir." }
+      ],
+      faqs: [
+        { question: "Bir sayının yüzdesi nasıl bulunur?", answer: "Sayıyı yüzde oranıyla çarpıp 100'e bölün. Örneğin 2.400'ün %15'i 2.400 × 15 ÷ 100 = 360 eder." },
+        { question: "Bir değer diğerinin yüzde kaçı nasıl hesaplanır?", answer: "Pay olan değeri taban değere bölüp 100 ile çarpın. Taban sıfır olamaz; sıfıra bölme tanımsızdır." },
+        { question: "Yüzde artış ve azalış arasındaki fark nedir?", answer: "İkisi de seçilen başlangıç değerine göre hesaplanır. Bitiş başlangıçtan büyükse artış, küçükse azalış olarak gösterilir." },
+        { question: "Bir sayıya yüzde eklemek için hangi işlem yapılır?", answer: "Önce sayının yüzde tutarı bulunur, sonra bu tutar ilk sayıya eklenir. Örneğin 200'e %10 eklenince 220 olur." },
+        { question: "Yüzde çıkarma işlemi nasıl yapılır?", answer: "Yüzde tutarı ilk değerden çıkarılır. Örneğin 200'den %10 çıkarıldığında sonuç 180 olur." },
+        { question: "Başlangıç değeri sıfırsa yüzde değişim bulunabilir mi?", answer: "Hayır. Değişim formülünde başlangıç değeri paydaya geldiğinden sıfır başlangıç için yüzde değişim tanımlı değildir." }
+      ],
+      lastUpdated: "2026-11-05",
+      sources: [{ name: "Yüzde işlemleri için temel aritmetik formülleri", note: "Sonuçlar girilen değerlere dayanır; haricî veri kullanılmaz." }]
+    },
     mode: "percentage",
     fields: [
       selectField("operation", "Hesaplama türü", [
         { label: "A sayısının %B'si", value: "of" },
         { label: "A, B'nin yüzde kaçı?", value: "share" },
-        { label: "A'dan B'ye yüzde değişim", value: "change" },
+        { label: "Başlangıçtan bitişe yüzde artış / azalış", value: "change" },
+        { label: "İki sayı arasındaki yüzde fark", value: "difference" },
         { label: "A'ya yüzde ekle", value: "add" },
         { label: "A'dan yüzde çıkar", value: "subtract" }
       ]),
@@ -99,18 +143,49 @@ export const tools: ToolDefinition[] = [
       numberField("percent", "Yüzde oranı (B)", "Örn. 15", "%", undefined, { field: "operation", value: ["of", "add", "subtract"] }),
       numberField("base", "Taban sayı (B)", "Örn. 2000", "₺", undefined, { field: "operation", value: "share" }),
       numberField("start", "Başlangıç değeri (A)", "Örn. 100", "₺", undefined, { field: "operation", value: "change" }),
-      numberField("end", "Bitiş değeri (B)", "Örn. 125", "₺", undefined, { field: "operation", value: "change" })
+      numberField("end", "Bitiş değeri (B)", "Örn. 125", "₺", undefined, { field: "operation", value: ["change", "difference"] })
     ]
   },
   {
-    id: "maas-zam-hesaplama", name: "Maaş zam hesaplama", category: "finans", popular: true,
-    description: "Zam oranına göre yeni maaşınızı ve zam tutarını hesaplayın.",
-    title: "Maaş Zam Hesaplama – Zamlı Maaşınızı Öğrenin | PratikHesap",
-    metaDescription: "Mevcut maaşınıza uygulanacak zam oranını girerek zam tutarını ve zamlı maaşınızı hesaplayın.",
-    intro: "Mevcut maaşınıza uygulanacak yüzde artışını girerek zam tutarını ve yeni brüt ya da net maaşınızı görüntüleyin. Hesaplama, girdiğiniz tutar üzerinden yapılır.",
-    formula: "Zam tutarı = Mevcut maaş × Zam oranı ÷ 100; yeni maaş = Mevcut maaş + zam tutarı",
-    example: "30.000 TL maaşa %20 zamda artış 6.000 TL, yeni maaş 36.000 TL olur.",
-    fields: [numberField("salary", "Mevcut maaş", "Örn. 30000", "₺"), numberField("percent", "Zam oranı", "Örn. 20", "%")]
+    id: "maas-zam-artis-hesaplama", name: "Maaş zam ve artış hesaplama", category: "finans", popular: true,
+    description: "Yüzde zam veya sabit artış tutarıyla yeni maaşınızı hesaplayın.",
+    title: "Maaş Zam ve Artış Hesaplama – Yeni Maaş | PratikHesap",
+    metaDescription: "Maaşınıza yüzde zam ya da sabit tutarlı artış uygulayın; artış miktarını ve yeni maaşınızı anında hesaplayın.",
+    intro: "Yüzde zam oranını veya maaşınıza eklenecek sabit tutarı seçerek zam miktarını, yeni ücreti ve artış oranını hesaplayın. Vergi ve bordro kesintileri hesaplanmaz.",
+    formula: "Yüzde zam: yeni maaş = maaş × (1 + oran ÷ 100). Sabit artış: yeni maaş = maaş + artış tutarı.",
+    example: "30.000 TL maaşa %20 zam uygulanırsa yeni tutar 36.000 TL; 5.000 TL sabit artışta 35.000 TL olur.",
+    content: {
+      definition: "Maaş zam ve artış hesaplama, ücretteki değişikliği iki yaygın biçimde değerlendirmeye yarar: mevcut maaşa belirli bir yüzde uygulamak veya maaşa sabit bir tutar eklemek. Yüzde yöntemiyle zam tutarı mevcut maaş ile oran çarpılıp 100'e bölünerek bulunur; ardından tutar maaşa eklenir. Sabit artış yönteminde eklenecek miktar doğrudan mevcut ücrete eklenir ve artış yüzdesi, ek tutarın başlangıç maaşına oranından hesaplanır. Bu araç yalnızca aritmetik işlem yapar; brüt ve net ücreti birbirinden ayırmaz, vergi veya sigorta kesintisi uygulamaz, zam hakkı ya da yürürlük tarihi belirlemez. Sonucu doğru yorumlamak için girdiğiniz maaşın aylık mı yıllık mı olduğunu ve brüt mü net mi olduğunu not edin; karşılaştırmada aynı ücret türünü ve dönemi kullanın. Oran veya tutar, sözleşme ya da işveren tarafından belirlenen koşullara göre seçilmelidir. Birden fazla dönemde farklı zamlar varsa her artış bir önceki yeni maaş üzerinden ayrı ayrı uygulanır; oranları doğrudan toplamak aynı sonucu vermeyebilir. Bordro ve yasal kesintiler için bu hesaplayıcının sonucunu resmi maaş bordrosu olarak değerlendirmeyin.",
+      steps: [
+        "Artış türü alanından yüzde zam veya sabit tutarlı artış seçin.",
+        "Mevcut maaşı ve seçtiğiniz yönteme karşılık gelen oranı ya da tutarı girin.",
+        "Yeni maaş, zam tutarı ve artış oranı otomatik olarak hesaplanır; sonuç girilen maaş türüyle aynı bazdadır."
+      ],
+      examples: [
+        { title: "Yüzde oranıyla zam", calculation: "30.000 × 20 ÷ 100 = 6.000 TL artış; 30.000 + 6.000", result: "Yeni maaş 36.000 TL olur." },
+        { title: "Sabit tutarlı artış", calculation: "25.000 + 5.000 = 30.000 TL; 5.000 ÷ 25.000 × 100", result: "Yeni maaş 30.000 TL, artış oranı %20 olur." }
+      ],
+      faqs: [
+        { question: "Yüzde maaş zammı nasıl hesaplanır?", answer: "Mevcut maaşı zam oranıyla çarpıp 100'e bölün. Zam tutarını mevcut maaşa ekleyerek yeni tutarı bulun." },
+        { question: "Sabit tutarlı maaş artışı hesaplanabilir mi?", answer: "Evet. Artış türünde sabit tutarı seçip maaşa eklenecek miktarı girin; araç yeni maaşı ve oranı gösterir." },
+        { question: "Araç brüt ve net maaş farkını hesaplıyor mu?", answer: "Hayır. Vergi, sigorta primi ve bordro kesintisi uygulamadan girdiğiniz miktara aritmetik artış yapar." },
+        { question: "Maaşım 30.000 TL ve zam oranı %20 ise yeni maaşım kaç olur?", answer: "Zam tutarı 6.000 TL, hesaplanan yeni maaş 36.000 TL olur." },
+        { question: "Birden fazla zammı birlikte hesaplar mı?", answer: "Hayır. Her işlem tek bir artış içindir. Birden fazla artışta sonraki oranı önceki artıştan sonraki tutara uygulayın." },
+        { question: "Hesaplanan tutar bordromdaki ödemeyle aynı olur mu?", answer: "Mutlaka değil. Bordro tutarı kesinti ve kişisel koşullara bağlıdır; bu araç bordro hesabı yapmaz." }
+      ],
+      lastUpdated: "2026-11-05",
+      sources: [{ name: "Yüzde ve toplama işlemleri için temel aritmetik formülleri", note: "Mevzuat, ücret politikası veya bordro verisi kullanılmaz." }]
+    },
+    mode: "salary-increase",
+    fields: [
+      selectField("increaseType", "Artış türü", [
+        { label: "Yüzde oranıyla zam", value: "percent" },
+        { label: "Sabit tutarlı artış", value: "fixed" }
+      ]),
+      numberField("salary", "Mevcut maaş", "Örn. 30000", "₺"),
+      numberField("percent", "Zam oranı", "Örn. 20", "%", undefined, { field: "increaseType", value: "percent" }),
+      numberField("increase", "Artış tutarı", "Örn. 5000", "₺", undefined, { field: "increaseType", value: "fixed" })
+    ]
   },
   {
     id: "indirim-hesaplama", name: "İndirim hesaplama", category: "finans", popular: true,
@@ -130,6 +205,41 @@ export const tools: ToolDefinition[] = [
     intro: "KDV oranını ve tutarı girip hesaplama yönünü seçin. KDV hariç tutara vergi ekleyebilir veya KDV dahil fiyattan KDV tutarıyla vergi hariç bedeli ayırabilirsiniz. Uygulanacak oranı işlem türünüze göre resmî kaynaklardan kontrol edin.",
     formula: "Hariç fiyattan dahil fiyat = Hariç tutar × (1 + KDV oranı ÷ 100). Dahil fiyattan hariç fiyat = Dahil tutar ÷ (1 + KDV oranı ÷ 100); KDV = Dahil tutar − Hariç tutar.",
     example: "1.000 TL KDV hariç tutara %20 eklenirse toplam 1.200 TL olur. 1.200 TL KDV dahil fiyattan %20 KDV ayrılırsa vergi hariç tutar 1.000 TL, KDV 200 TL'dir.",
+    content: {
+      definition: "Katma Değer Vergisi (KDV), mal teslimi ve hizmet ifası gibi işlemlerde mevzuat kapsamında hesaplanan dolaylı bir vergidir. Bir fiyatın “KDV hariç” olması, belirtilen tutara seçilen vergi oranının ayrıca ekleneceği anlamına gelir; “KDV dahil” fiyatta ise toplam tutarın içinde vergi payı zaten bulunur. Bu hesaplayıcı, kullanıcının girdiği oran ve tutara göre iki yönde işlem yapar: hariç tutara KDV ekleyerek toplamı bulur veya dahil toplamdan KDV payını ayırarak vergi hariç bedeli hesaplar. Dahil fiyattan vergi ayrılırken oranı toplam tutara doğrudan çarpmak doğru değildir; dahil tutar, 1 + oran/100 değerine bölünür. Araç yasal vergi oranını kendiliğinden seçmez, ürün veya hizmetin hangi orana tabi olduğunu belirlemez ve vergi beyannamesi hazırlamaz. Oranlar işlem türüne ve yürürlükteki mevzuata göre değişebileceği için işlem öncesinde Gelir İdaresi Başkanlığı (GİB) veya güncel resmî düzenlemeyi kontrol edin. Matrah, istisna ve özel uygulamalar işlem koşullarına göre farklılık gösterebilir; bu hesaplayıcı bu ayrıntıları değerlendirmez. Satış belgesinde fiyatın dahil veya hariç gösterilmesi de sonucun nasıl yorumlanacağını etkiler. Tablodaki yüzdeler kolay karşılaştırma için seçilmiş örnek oranlardır; yürürlükteki mevzuatın tamamını temsil etmez. Gerçek işlemde doğru oranı bulmak, işlemin niteliğine bağlı ayrı bir adımdır. Aşağıdaki tablo yalnızca matematiksel örnektir; oranların belirli bir satışta uygulanacağını göstermez.",
+      steps: [
+        "KDV hariç tutardan toplamı mı, yoksa KDV dahil toplamdan vergi payını mı bulacağınızı seçin.",
+        "İşleme uygulanacak oranı yetkili ve güncel kaynaktan doğrulayıp oran alanına girin; araç yasal oran önermez.",
+        "Tutarı girip Hesapla düğmesine basın. Sonuçta KDV tutarı ve diğer fiyat bileşenleri gösterilir."
+      ],
+      examples: [
+        { title: "Hariç fiyata KDV ekleme", calculation: "2.500 TL × %10 = 250 TL KDV; 2.500 + 250", result: "Örnek oranla KDV dahil tutar 2.750 TL'dir." },
+        { title: "Dahil fiyattan KDV ayırma", calculation: "1.200 TL ÷ 1,20 = 1.000 TL vergi hariç bedel; 1.200 − 1.000", result: "Örnek %20 oranla KDV payı 200 TL, vergi hariç bedel 1.000 TL'dir." }
+      ],
+      referenceTable: {
+        caption: "1.000 TL vergi hariç tutar için örnek oranlarla matematiksel karşılıklar",
+        headers: ["Örnek oran", "KDV tutarı", "Örnek dahil toplam"],
+        rows: [
+          ["%1", "10 TL", "1.010 TL"],
+          ["%10", "100 TL", "1.100 TL"],
+          ["%20", "200 TL", "1.200 TL"]
+        ]
+      },
+      faqs: [
+        { question: "KDV hariç fiyata KDV nasıl eklenir?", answer: "Tutar, 1 + oran/100 katsayısıyla çarpılır. Örneğin 1.000 TL'ye örnek olarak %20 uygulanırsa toplam 1.200 TL olur." },
+        { question: "KDV dahil tutarın içindeki vergi nasıl bulunur?", answer: "Dahil tutarı 1 + oran/100 değerine bölerek vergi hariç bedeli bulun; dahil toplamdan bu bedeli çıkarınca KDV payı elde edilir." },
+        { question: "Bu araç doğru KDV oranını kendisi seçiyor mu?", answer: "Hayır. Oranı kullanıcı girer. Mal veya hizmete uygulanacak güncel oranı GİB ve ilgili mevzuattan doğrulayın." },
+        { question: "Tablodaki %1, %10 ve %20 her üründe geçerli midir?", answer: "Hayır. Bunlar yalnızca örnek tutar hesabıdır; hangi oranın uygulanacağını göstermez. İşleme özgü oranı güncel resmî kaynaktan kontrol edin." },
+        { question: "KDV dahil fiyat 1.200 TL ve oran %20 ise vergi kaç TL'dir?", answer: "Bu örnek varsayımında vergi hariç bedel 1.000 TL, içindeki KDV 200 TL olur." },
+        { question: "Hesaplama beyanname veya muhasebe danışmanlığı sağlar mı?", answer: "Hayır. Araç, girilen oranla aritmetik hesap yapar; istisna, matrah, beyan ve mevzuata ilişkin profesyonel değerlendirme sunmaz." }
+      ],
+      lastUpdated: "2026-11-05",
+      sources: [{
+        name: "Gelir İdaresi Başkanlığı (GİB)",
+        url: "https://www.gib.gov.tr/",
+        note: "İşleme uygulanacak güncel oran ve vergi uygulaması için resmî GİB kaynaklarını kontrol edin."
+      }]
+    },
     fields: [
       selectField("direction", "Hesaplama yönü", [
         { label: "KDV hariç tutardan dahil fiyatı hesapla", value: "excluded-to-included" },
@@ -158,6 +268,75 @@ export const tools: ToolDefinition[] = [
     formula: "Yeni maaş = Mevcut maaş + Artış tutarı; artış oranı = Artış tutarı ÷ Mevcut maaş × 100",
     example: "25.000 TL maaşa 5.000 TL eklendiğinde yeni maaş 30.000 TL, artış oranı %20 olur.",
     fields: [numberField("salary", "Mevcut maaş", "Örn. 25000", "₺"), numberField("increase", "Artış tutarı", "Örn. 5000", "₺")]
+  },
+  {
+    id: "brut-net-maas-hesaplama", name: "Brüt-net maaş hesaplama", category: "finans", popular: true, createdAt: "2026-11-05T12:41:14+03:00",
+    description: "Brüt-net bordro kapsamını, 2026 resmî kaynaklarını ve doğrulama durumunu inceleyin.",
+    title: "Brüt Net Maaş Hesaplama 2026 – 12 Aylık Bordro | PratikHesap",
+    metaDescription: "Brüt-net maaş hesabında gereken 2026 resmî parametrelerini ve kaynaklarını görün. Doğrulanmamış veriler tahmin edilmediği için hesaplama geçici olarak kapalıdır.",
+    intro: "Bu araç için brüt/net yönü, aylık/yıllık ücret, çalışma ayı ve engellilik indirimi alanları hazırlandı. Yanlış bordro sonucu vermemek için 2026 gelir vergisi dilimleri, SGK tavanı ve asgari ücret istisnası hesabı resmî kaynakta doğrulanana kadar hesaplama kapalıdır.",
+    formula: "Net ücret = brüt ücret − SGK işçi primi − işsizlik sigortası işçi primi − gelir vergisi (asgari ücret istisnası sonrası) − damga vergisi (asgari ücret istisnası sonrası). İşveren maliyeti = brüt ücret + işveren SGK primi + işveren işsizlik primi. Gelir vergisi kümülatif matraha göre hesaplanır.",
+    example: "Araç, girilen aylık brüt tutardan ay ay yasal kesintileri ve istisnaları düşerek tahmini neti bulur. Netten brüte modunda ise girilen net tutarı sağlayan brütü her ayın kümülatif vergi matrahına göre çözer.",
+    content: {
+      definition: "Brüt maaş, iş sözleşmesinde veya ücret bildiriminde kesintiler yapılmadan önce belirtilen ücrettir; net maaş ise yasal kesintiler ve uygulanabilen istisnalar sonrasında çalışana kalan tutardır. Brüt ile net arasındaki fark yalnızca tek bir sabit oran değildir. SGK işçi primi, işsizlik sigortası primi, gelir vergisi tarifesi, damga vergisi, asgari ücret istisnası ve yıl içinde biriken vergi matrahı sonucu etkiler. Bu nedenle aynı brüt ücretin net karşılığı yılın her ayında aynı olmayabilir: kümülatif vergi matrahı arttıkça ücretin bir bölümü üst vergi dilimine geçebilir. Bu araç, seçtiğiniz yönde (brütten nete veya netten brüte) aylık ya da yıllık tutarı alır; yıllık tutarı 12 aya eşit dağıtır, seçtiğiniz çalışma ayı için aylık kesinti dökümünü öne çıkarır ve yılın 12 ayını tablo halinde gösterir. Engellilik indirimi derecesi isteğe bağlıdır; seçilmediğinde indirim uygulanmaz. Hesaplama, temel tam ay ücret senaryosuna dayanır ve sendika aidatı, özel sigorta, teşvik, ek ödeme, icra, kıdem/ihbar, kısmi çalışma veya kişiye özel bordro unsurlarını içermez. Mevzuat ya da çalışanın durumu farklıysa bordrodaki tutar değişebilir. Sonuç tahminidir; resmi bordro, vergi danışmanlığı veya işveren beyanı yerine geçmez. Parametreler yıl ve kaynak bilgisiyle saklanır; hesaplama yılını ve geçerlilik tarihini kontrol ederek sonucu yorumlayın.",
+      steps: [
+        "Brütten nete veya netten brüte hesaplama yönünü seçin; tutarın aylık mı yıllık mı olduğunu belirtin.",
+        "Maaş tutarını girin, yıl içindeki çalışma ayını seçin ve varsa engellilik indirimi derecesini belirtin.",
+        "Seçilen ayın kesinti dökümünü ve kümülatif matrahı, ardından SGK, vergi, istisna, net ve işveren maliyeti sütunlarını içeren 12 aylık tabloyu inceleyin."
+      ],
+      examples: [
+        { title: "Aylık brüt ücretten nete", calculation: "Brüt ücret − SGK işçi primi − işsizlik primi − istisna sonrası vergiler", result: "Hesaplama, eksik 2026 bordro parametreleri resmî kaynaklardan doğrulandıktan sonra etkinleştirilecektir." },
+        { title: "Yıllık net hedeften brüte", calculation: "Yıllık net hedef ÷ 12 = aylık net hedef; kümülatif vergi matrahı dikkate alınır", result: "Yıllık çizelge ve netten brüte çözüm mantığı hazırdır; doğrulanmayan verilerle sonuç üretilmez." }
+      ],
+      faqs: [
+        { question: "Brüt maaştan net maaş nasıl hesaplanır?", answer: "Brüt ücretten SGK ve işsizlik işçi primleri ile istisnalar sonrası gelir ve damga vergileri düşülür. Gelir vergisi kümülatif matraha bağlı olduğundan aylar arasında değişebilir." },
+        { question: "Netten brüte hesaplama kesin bordro tutarını verir mi?", answer: "Hayır. Araç, seçilen temel senaryoda hedef nete karşılık gelen brütü yaklaşıklar. Ek ödemeler, teşvikler, özel kesintiler ve işyeri bordro uygulamaları sonucu değiştirebilir." },
+        { question: "Kümülatif vergi matrahı neden önemlidir?", answer: "Gelir vergisi tarifesi yıl içindeki birikimli matraha uygulanır. Matrah ilerledikçe ücretin bir bölümü üst vergi dilimine geçebilir ve net ücret etkilenebilir." },
+        { question: "Engellilik indirimi hangi durumda seçilmelidir?", answer: "Yalnızca mevzuata göre ilgili indirimden yararlanma hakkınız varsa derecenizi seçin. Araç belge veya hak sahipliği doğrulamaz; uygunluğu işvereniniz ya da yetkili resmî kaynakla kontrol edin." },
+        { question: "Asgari ücret istisnası tüm ücretlerden düşülür mü?", answer: "Hesaplama, yapılandırılmış yıl parametreleri kapsamında gelir ve damga vergisi istisnasını uygular; istisna kesintiyi sıfırlamakla sınırlıdır ve net ödemeyi aşan bir vergi iadesi oluşturmaz." },
+        { question: "İşveren maliyeti hangi kalemleri içerir?", answer: "Brüt ücret ile yapılandırılmış oranlara göre hesaplanan işveren SGK ve işsizlik primlerini içerir. Teşvik, yan hak, fazla mesai ve diğer işveren giderleri dahil değildir." },
+        { question: "Hesaplama resmî bordro veya vergi danışmanlığı yerine geçer mi?", answer: "Hayır. Etkinleştirildiğinde de sonuç bilgilendirme amaçlı bir tahmin olacaktır. Kesin bordro ve kişisel durumunuz için işveren bordro birimine veya yetkin bir uzmana başvurun." },
+        { question: "Hesaplama neden şu an kullanılamıyor?", answer: "Yanlış sonuç göstermemek için SGK prime esas kazanç üst sınırı, ücret gelirleri vergi dilimleri ve asgari ücret gelir vergisi istisnası yöntemi resmî kaynakta doğrulanana kadar hesaplama kapalı tutuluyor." }
+      ],
+      lastUpdated: "2026-11-05",
+      sources: [
+        { name: "Gelir İdaresi Başkanlığı – Gelir vergisi tarifesi", url: "https://www.gib.gov.tr/yardim-ve-kaynaklar/yararli-bilgiler/gelir-vergisi-tarifesi", note: "Yıllık ücret gelir vergisi tarifesi ve istisna uygulamasının resmî açıklamaları." },
+        { name: "Sosyal Güvenlik Kurumu", url: "https://www.sgk.gov.tr/", note: "SGK prim oranları ile prime esas kazanç alt ve üst sınırları." },
+        { name: "Çalışma ve Sosyal Güvenlik Bakanlığı – Asgari ücretin net hesabı ve işverene maliyeti", url: "https://www.csgb.gov.tr/poco-pages/asgari-ucret/", note: "2026 dönemi asgari ücret tutarı ve indirimsiz işveren prim oranı." }
+      ]
+    },
+    mode: "salary-payroll",
+    fields: [
+      selectField("direction", "Hesaplama yönü", [
+        { label: "Brütten nete", value: "gross-to-net" },
+        { label: "Netten brüte", value: "net-to-gross" }
+      ]),
+      selectField("period", "Ücret dönemi", [
+        { label: "Aylık", value: "monthly" },
+        { label: "Yıllık", value: "annual" }
+      ]),
+      numberField("amount", "Maaş tutarı", "Örn. 50000", "₺"),
+      selectField("month", "Çalışma ayı", [
+        { label: "Ocak", value: "1" },
+        { label: "Şubat", value: "2" },
+        { label: "Mart", value: "3" },
+        { label: "Nisan", value: "4" },
+        { label: "Mayıs", value: "5" },
+        { label: "Haziran", value: "6" },
+        { label: "Temmuz", value: "7" },
+        { label: "Ağustos", value: "8" },
+        { label: "Eylül", value: "9" },
+        { label: "Ekim", value: "10" },
+        { label: "Kasım", value: "11" },
+        { label: "Aralık", value: "12" }
+      ]),
+      selectField("disabilityDegree", "Engellilik indirimi", [
+        { label: "Yok", value: "none" },
+        { label: "1. derece", value: "1" },
+        { label: "2. derece", value: "2" },
+        { label: "3. derece", value: "3" }
+      ])
+    ]
   },
   {
     id: "yas-hesaplama", name: "Yaş hesaplama", category: "tarih", popular: true,
@@ -210,7 +389,7 @@ export const tools: ToolDefinition[] = [
     fields: [dateField("birthDate", "Doğum tarihi")]
   },
   {
-    id: "gebelik-haftasi-hesaplama", name: "Gebelik haftası hesaplama", category: "gunluk-yasam", isNew: true,
+    id: "gebelik-haftasi-hesaplama", name: "Gebelik haftası hesaplama", category: "gunluk-yasam",
     description: "Son adet tarihine göre yaklaşık gebelik haftasını ve tahmini doğum tarihini bulun.",
     title: "Gebelik Haftası Hesaplama – Son Adet Tarihine Göre | PratikHesap",
     metaDescription: "Son adet tarihinizi girerek yaklaşık gebelik haftanızı ve 280 günlük hesaba dayalı tahmini doğum tarihinizi öğrenin.",
@@ -227,6 +406,31 @@ export const tools: ToolDefinition[] = [
     intro: "İki veya daha fazla not ekleyerek basit aritmetik ortalamayı bulun. En fazla 30 not girebilirsiniz; bu hesaplama okulun ağırlıklı not yönetmeliğini uygulamaz.",
     formula: "Not ortalaması = Girilen notların toplamı ÷ not sayısı",
     example: "70, 80 ve 90 notlarının ortalaması (70 + 80 + 90) ÷ 3 = 80 puandır.",
+    content: {
+      definition: "Not ortalaması, birden fazla puanı tek bir özet değerde toplamak için kullanılan aritmetik ölçüdür. Bu araç girilen notları toplar ve not sayısına böler; tüm notların eşit ağırlıklı olduğunu varsayar. Örneğin üç sınavın her biri dönem sonucunda aynı etkiye sahipse basit ortalama genel görünüm sağlayabilir. Ancak okulunuz sınavlara farklı katsayı veriyorsa, dersleri kredi veya saatle ağırlıklandırıyorsa ya da proje ve katılım puanlarını ayrıca hesaba katıyorsa bu basit sonuç resmî ders notunuzla aynı olmayabilir. Bu sayfada en fazla 30 sayısal not girilebilir; boş bırakılan satırlar hesaba katılmaz ve geçerli notların 0 ile 100 arasında olması gerekir. Harf notu, 4’lük sistem veya kurumun dönem sonu kuralı bu aracın kapsamına dahil değildir. Resmî başarı durumunuzu öğrenmek için okulunuzun değerlendirme ölçütlerini ve öğrenci bilgi sistemindeki sonucu esas alın. Hesaplayıcıyı farklı not senaryolarını karşılaştırmak veya eşit ağırlıklı bir ortalamayı hızlıca kontrol etmek için kullanabilirsiniz. Bir notun genel başarı içindeki etkisini yorumlarken değerlendirmelerin ağırlığını, geçme koşullarını ve varsa telafi sınavı kuralını ayrıca inceleyin. Ders ortalaması ile dönem veya genel not ortalaması farklı kapsamları anlatabilir; tek derse ait birkaç puanın sonucu tüm dersleri kapsayan GANO gibi değerlendirilmemelidir. Bu araç yalnızca ekrana yazdığınız notların eşit ağırlıklı ortalamasını verir ve öğrenci kayıtlarınıza erişmez.",
+      steps: [
+        "Ortalamaya dahil etmek istediğiniz notları ayrı satırlara girin; gerekirse Satır ekle ile yeni not alanları açın.",
+        "Boş bırakacağınız notları tamamlamanız gerekmez; araç yalnızca girilen geçerli notları sayar.",
+        "Hesapla düğmesine basın. Araç notların toplamını geçerli not sayısına böler."
+      ],
+      examples: [
+        { title: "Üç eşit ağırlıklı sınav", calculation: "(70 + 80 + 90) ÷ 3 = 240 ÷ 3", result: "Basit not ortalaması 80 puandır." },
+        { title: "İki farklı puan", calculation: "(65 + 95) ÷ 2 = 160 ÷ 2", result: "İki not eşit ağırlıklı kabul edildiğinde ortalama 80 puandır." }
+      ],
+      faqs: [
+        { question: "Not ortalaması nasıl hesaplanır?", answer: "Girilen notların toplamını geçerli not sayısına bölün. Bu araç her notu eşit ağırlıklı sayar." },
+        { question: "Notları farklı ağırlıklarla hesaplayabilir miyim?", answer: "Hayır. Bu araç basit aritmetik ortalama kullanır. Kredi veya sınav yüzdesiyle ağırlıklandırma gerekiyorsa ilgili ağırlıklı not aracını kullanın." },
+        { question: "Boş not satırları ortalamayı etkiler mi?", answer: "Hayır. Tamamen boş bırakılan satırlar hesaplamaya dahil edilmez; girilen notlar ise 0–100 aralığında olmalıdır." },
+        { question: "Araç kaç not kabul ediyor?", answer: "Formda en fazla 30 satıra kadar not ekleyebilirsiniz." },
+        { question: "Bu sonuç dönem sonu veya okul sistemindeki resmî not mudur?", answer: "Hayır. Okulunuzun katsayı, kredi ve yuvarlama kuralları farklı olabilir; resmî sonuç için kurumunuzun duyurusunu esas alın." },
+        { question: "Notları ondalıklı girebilir miyim?", answer: "Evet. Ondalık kısmı virgülle yazabilirsiniz; örneğin 82,5." }
+      ],
+      lastUpdated: "2026-11-05",
+      sources: [{
+        name: "Basit aritmetik ortalama formülü",
+        note: "Kurum not yönetmeliği, ders kredisi ve sınav ağırlığı bu hesaplamaya dahil değildir."
+      }]
+    },
     mode: "grade-list",
     fields: [numberField("grade1", "Not", "Örn. 70", "puan")]
   },
@@ -290,14 +494,72 @@ export const tools: ToolDefinition[] = [
     ]
   },
   {
+    id: "not-ortalamasi-gano-hesaplama", name: "Not ortalaması / GANO hesaplama", category: "egitim", popular: true,
+    description: "Ders kredileriyle ağırlıklı ortalamayı 4'lük veya 100'lük sistemde hesaplayın.",
+    title: "Not Ortalaması ve GANO Hesaplama – 4'lük / 100'lük Sistem | PratikHesap",
+    metaDescription: "Ders adı, kredi ve harf notu veya puanları girin; 4'lük ya da 100'lük ağırlıklı not ortalamanızı hesaplayın.",
+    intro: "Derslerinizi ve kredilerini ekleyin; notları 4'lük harf/puan veya 100'lük sistemde girerek kredi ağırlıklı ortalamayı hesaplayın. Kurumunuzun not dönüşüm tablosu farklı olabilir.",
+    formula: "Ağırlıklı ortalama = Σ(ders notu × ders kredisi) ÷ Σ(ders kredisi). 4'lük sistemde harf notları AA=4,00, BA=3,50, BB=3,00, CB=2,50, CC=2,00, DC=1,50, DD=1,00, FD=0,50, FF=0,00 karşılığıyla kullanılır.",
+    example: "3 kredilik AA (4,00) ve 2 kredilik BB (3,00) ile ağırlıklı 4'lük ortalama (3×4 + 2×3) ÷ 5 = 3,60 olur.",
+    content: {
+      definition: "Not ortalaması, farklı derslerdeki başarıyı tek bir ölçüde özetler. Genel ağırlıklı not ortalaması (GANO) hesaplanırken her dersin notu, dersin kredisiyle birlikte değerlendirilir; kredisi yüksek dersler sonuca daha fazla etki eder. Bu araç ders adını, krediyi ve notu satır satır girmenize izin verir. 4'lük sistemde yaygın harf notu karşılıklarını seçebilir veya doğrudan 0–4 arasında puan girebilirsiniz. 100'lük sistemde ise ders puanlarını 0 ile 100 arasında girersiniz. Sonuç, seçilen sistemde kredi ağırlıklı ortalamadır. Üniversitelerin harf notu karşılıkları, kredi hesaplama şekli, başarısız derslerin tekrarında hangi notun sayılacağı ve yuvarlama kuralları değişebilir. Bu nedenle hesaplayıcı sonucu resmi transkript veya öğrenci bilgi sistemi kaydının yerine geçmez. Yalnızca ortalamaya katılacak dersleri ekleyin; her ders için kredi ve not girilmelidir. Henüz sonuçlanmamış dersleri boş bırakabilir veya listeden çıkartabilirsiniz. Ders ekle/sil kontrolleriyle satır sayısını düzenleyebilir, farklı not senaryolarını karşılaştırmak için 4'lük ve 100'lük giriş biçimleri arasında geçiş yapabilirsiniz. Resmi GANO için okulunuzun güncel yönetmeliğini ve transkriptini esas alın.",
+      steps: [
+        "Not sistemini seçin. 4'lük sistemde harf notu veya 0–4 puan girişi, 100'lük sistemde 0–100 puan girişi kullanabilirsiniz.",
+        "Her ders için ders adını, kredi miktarını ve notu girin. Gerekiyorsa Satır ekle ile ders ekleyin.",
+        "Sonuç, ders kredileriyle ağırlıklandırılarak hesaplanır; boş veya eksik ders satırları için gerekli alanları tamamlayın."
+      ],
+      examples: [
+        { title: "4'lük sistemde harf notları", calculation: "(3 kredi × AA 4,00 + 2 kredi × BB 3,00) ÷ 5 kredi", result: "Ağırlıklı ortalama 3,60 / 4,00'dır." },
+        { title: "100'lük sistemde puanlar", calculation: "(3 kredi × 80 + 2 kredi × 70) ÷ 5 kredi", result: "Ağırlıklı ortalama 76 / 100'dür." }
+      ],
+      faqs: [
+        { question: "GANO nasıl hesaplanır?", answer: "Her dersin notu kredisiyle çarpılır, çarpımlar toplanır ve toplam krediye bölünür. Sonuç seçilen not sisteminde gösterilir." },
+        { question: "Harf notuyla ortalama hesaplayabilir miyim?", answer: "Evet. 4'lük sistemi ve harf notu girişini seçerek listelenen harf notlarını kullanabilirsiniz." },
+        { question: "4'lük sistemde doğrudan puan girebilir miyim?", answer: "Evet. 4'lük sistem altında puan girişini seçip her ders için 0–4 aralığında değer girin." },
+        { question: "100'lük sistemde ders kredisi etkili midir?", answer: "Evet. Araç her iki sistemde de notları girilen ders kredileriyle ağırlıklandırır." },
+        { question: "Hesaplanan sonuç resmi üniversite GANO'm mudur?", answer: "Hayır. Kurumların not dönüşüm, kredi ve yuvarlama kuralları farklı olabilir; resmi transkriptinizi esas alın." },
+        { question: "Ders ekleyip silebilir miyim?", answer: "Evet. En fazla 30 ders satırı ekleyebilir, son satırı silebilirsiniz. Hesaplamaya katılacak her derste kredi ve not gereklidir." }
+      ],
+      lastUpdated: "2026-11-05",
+      sources: [{ name: "Kredi ağırlıklı aritmetik ortalama formülü", note: "Harf notu karşılıkları yaygın örnek değerlerdir; üniversitenizin yönetmeliği farklı olabilir." }]
+    },
+    mode: "unified-gpa",
+    fields: [
+      selectField("gradeSystem", "Not sistemi", [
+        { label: "4'lük sistem", value: "4" },
+        { label: "100'lük sistem", value: "100" }
+      ]),
+      selectField("gradeEntry", "4'lük not girişi", [
+        { label: "Harf notu", value: "letter" },
+        { label: "4 üzerinden puan", value: "score" }
+      ]),
+      numberField("grade1", "Ders notu", "Örn. 80")
+    ]
+  },
+  {
     id: "metrekare-hesaplama", name: "Metrekare hesaplama", category: "gunluk-yasam",
-    description: "Dikdörtgen alanın metrekaresini ölçülerle hesaplayın.",
-    title: "Metrekare Hesaplama – Alanı m² Olarak Bulun | PratikHesap",
-    metaDescription: "Dikdörtgen alanın en ve boy ölçülerini girerek metrekare değerini hesaplayın.",
-    intro: "En ve boy ölçüleri metre cinsindeyse dikdörtgen bir yüzeyin alanını metrekare olarak hesaplayın. Düzensiz şekillerde sonuç yaklaşık değer verir.",
-    formula: "Alan (m²) = En (m) × Boy (m)",
-    example: "4 metre eninde ve 5 metre boyundaki bir odanın alanı 20 m²'dir.",
-    fields: [numberField("width", "En", "Örn. 4", "metre"), numberField("length", "Boy", "Örn. 5", "metre")]
+    description: "Dikdörtgen, kare, üçgen, daire ve yamuk şekillerinin alanını hesaplayın.",
+    title: "Alan ve Metrekare Hesaplama – Şekil Seçin | PratikHesap",
+    metaDescription: "Dikdörtgen, kare, üçgen, daire veya yamuk şeklini seçerek ölçülerinden alanı ve metrekareyi hesaplayın.",
+    intro: "Dikdörtgen, kare, üçgen, daire veya yamuk seçin; gerekli kenar ve yükseklik ölçülerini metre olarak girerek alanı hesaplayın.",
+    formula: "Dikdörtgen: en × boy. Kare: kenar². Üçgen: taban × yükseklik ÷ 2. Daire: π × yarıçap². Yamuk: (alt taban + üst taban) × yükseklik ÷ 2.",
+    example: "4 m × 5 m dikdörtgenin alanı 20 m²; 3 m taban ve 2 m yükseklikteki üçgenin alanı 3 m²'dir.",
+    fields: [
+      selectField("shape", "Şekil", [
+        { label: "Dikdörtgen", value: "rectangle" },
+        { label: "Kare", value: "square" },
+        { label: "Üçgen", value: "triangle" },
+        { label: "Daire", value: "circle" },
+        { label: "Yamuk", value: "trapezoid" }
+      ]),
+      numberField("width", "En", "Örn. 4", "metre", undefined, { field: "shape", value: "rectangle" }),
+      numberField("length", "Boy", "Örn. 5", "metre", undefined, { field: "shape", value: "rectangle" }),
+      numberField("side", "Kenar uzunluğu", "Örn. 4", "metre", undefined, { field: "shape", value: "square" }),
+      numberField("base", "Taban uzunluğu", "Örn. 3", "metre", undefined, { field: "shape", value: ["triangle", "trapezoid"] }),
+      numberField("height", "Yükseklik", "Örn. 2", "metre", undefined, { field: "shape", value: ["triangle", "trapezoid"] }),
+      numberField("radius", "Yarıçap", "Örn. 2", "metre", undefined, { field: "shape", value: "circle" }),
+      numberField("upperBase", "Üst taban uzunluğu", "Örn. 2", "metre", undefined, { field: "shape", value: "trapezoid" })
+    ]
   },
   {
     id: "boy-kilo-orani-hesaplama", name: "Boy ve kilo oranı hesaplama", category: "gunluk-yasam",
@@ -349,7 +611,52 @@ export const tools: ToolDefinition[] = [
     ]
   },
   {
-    id: "dortluk-not-sistemi-hesaplama", name: "4'lük not sistemi hesaplama", category: "egitim", popular: true, isNew: true,
+    id: "birim-donusturme", name: "Birim dönüştürme", category: "gunluk-yasam", popular: true,
+    description: "Uzunluk, ağırlık, hacim, alan, sıcaklık ve süre birimlerini dönüştürün.",
+    title: "Birim Dönüştürme – Uzunluk, Ağırlık, Hacim ve Daha Fazlası | PratikHesap",
+    metaDescription: "Uzunluk, ağırlık, hacim, alan, sıcaklık ve süre birimleri arasında hızlı ve ücretsiz dönüşüm yapın.",
+    intro: "Bir kategori seçin; dönüştürülecek miktarı ve başlangıç/hedef birimleri girerek sonucu görün. Eski litre, kilogram ve süre dönüştürücüleri de kullanılmaya devam eder.",
+    formula: "Sonuç = Girilen miktar × kaynak biriminin temel birim katsayısı ÷ hedef biriminin temel birim katsayısı. Sıcaklık dönüşümleri ilgili doğrusal formülleri kullanır.",
+    example: "2,5 km = 2.500 m; 20 °C = 68 °F.",
+    content: {
+      definition: "Birim dönüştürme, aynı fiziksel büyüklüğü farklı ölçü birimleriyle ifade etmeyi sağlar. Bu araç uzunluk, ağırlık, hacim, alan, sıcaklık ve süre kategorilerini kapsar. Örneğin kilometreyi metreye, kilogramı grama, litreyi metreküpe veya saati dakikaya çevirebilirsiniz. Önce kategori seçilir; ardından miktar, kaynak birim ve hedef birim belirlenir. Uzunluk, ağırlık, hacim, alan ve süre dönüşümleri ortak bir temel birim katsayısına göre yapılır. Sıcaklık için yalnızca katsayı kullanılamadığı için Santigrat, Fahrenheit ve Kelvin arasındaki ayrı dönüşüm formülleri uygulanır. Sonuç, girilen değerin matematiksel eşdeğeridir; yuvarlama ekranda Türkçe sayı biçimiyle gösterilir. Birimler arasında dönüştürme yaparken aynı büyüklüğün seçildiğinden emin olun: kilogram bir ağırlık birimi, litre ise hacim birimidir ve aralarında genel bir doğrudan dönüşüm yoktur; yoğunluk gibi ek bilgi gerekir. Benzer biçimde, gündelik dilde kullanılan ton burada metrik ton anlamındadır. Bu hesaplayıcı ölçüm cihazlarının doğruluğunu veya ürün özelliklerini doğrulamaz. Eski litre, kilogram ve saat-dakika araçları da özel dönüşüm seçenekleriyle kullanılmaya devam eder. Ölçekleri karşılaştırırken kaynak ve hedef birim adlarını kontrol etmek, sonucu yanlış yorumlamayı önler.",
+      steps: [
+        "Uzunluk, ağırlık, hacim, alan, sıcaklık veya süre kategorilerinden birini seçin.",
+        "Dönüştürülecek miktarı girin ve başlangıç ile hedef birimleri belirleyin.",
+        "Sonuç, geçerli birim dönüşüm formülüyle otomatik olarak güncellenir."
+      ],
+      examples: [
+        { title: "Uzunluk dönüşümü", calculation: "2,5 km × 1.000 m/km", result: "2,5 kilometre 2.500 metredir." },
+        { title: "Sıcaklık dönüşümü", calculation: "20 °C × 9 ÷ 5 + 32", result: "20 derece Santigrat 68 derece Fahrenheit'tır." }
+      ],
+      faqs: [
+        { question: "Hangi birim kategorileri dönüştürülebilir?", answer: "Uzunluk, ağırlık, hacim, alan, sıcaklık ve süre kategorileri desteklenir." },
+        { question: "Kilogramı litreye çevirebilir miyim?", answer: "Doğrudan hayır. Kilogram kütle, litre hacim birimidir; dönüşüm için maddenin yoğunluğu gibi ek bilgi gerekir." },
+        { question: "Sıcaklık dönüşümleri nasıl yapılır?", answer: "Santigrat, Fahrenheit ve Kelvin arasındaki dönüşümler her ölçeğe özgü formüllerle hesaplanır." },
+        { question: "Ondalıklı miktar girebilir miyim?", answer: "Evet. Türkçe sayı biçiminde ondalık virgül kullanabilirsiniz; örneğin 2,5." },
+        { question: "Ton hangi anlamda kullanılıyor?", answer: "Ağırlık kategorisindeki ton, 1.000 kilogram olan metrik tonu ifade eder." },
+        { question: "Litre ve kilogram araçları çalışmaya devam ediyor mu?", answer: "Evet. Ayrı litre, kilogram ve saat-dakika sayfaları korunmuştur; bu sayfa daha fazla birim seçeneği sunar." }
+      ],
+      lastUpdated: "2026-11-05",
+      sources: [{ name: "Uluslararası birim eşitlikleri ve tanımlı dönüşüm formülleri", note: "Sonuçlar standart birim ilişkilerine dayanır." }]
+    },
+    mode: "unit-conversion",
+    fields: [
+      selectField("category", "Birim kategorisi", [
+        { label: "Uzunluk", value: "length" },
+        { label: "Ağırlık", value: "weight" },
+        { label: "Hacim", value: "volume" },
+        { label: "Alan", value: "area" },
+        { label: "Sıcaklık", value: "temperature" },
+        { label: "Süre", value: "time" }
+      ]),
+      numberField("amount", "Miktar", "Örn. 2,5"),
+      selectField("fromUnit", "Başlangıç birimi", [{ label: "Kilometre (km)", value: "km" }]),
+      selectField("toUnit", "Hedef birim", [{ label: "Metre (m)", value: "m" }])
+    ]
+  },
+  {
+    id: "dortluk-not-sistemi-hesaplama", name: "4'lük not sistemi hesaplama", category: "egitim", popular: true,
     description: "Harf notu ve ders kredilerini kullanarak 4 üzerinden ağırlıklı ortalamanızı bulun.",
     title: "4'lük Not Sistemi Hesaplama – Üniversite GPA ve AGNO | PratikHesap",
     metaDescription: "Üniversite harf notlarınızı ve AKTS ya da yerel kredi değerlerinizi girin; 4'lük sistemde ağırlıklı not ortalamanızı (GPA/AGNO) hesaplayın.",
@@ -360,7 +667,7 @@ export const tools: ToolDefinition[] = [
     fields: [selectField("grade1", "Ders harf notu", letterGradeOptions)]
   },
   {
-    id: "agirlikli-not-ortalamasi-hesaplama", name: "Ağırlıklı not ortalaması", category: "egitim", popular: true, isNew: true,
+    id: "agirlikli-not-ortalamasi-hesaplama", name: "Ağırlıklı not ortalaması", category: "egitim", popular: true,
     description: "Sınav notlarınızı vize, final ve ödev yüzdelerine göre birleştirin.",
     title: "Ağırlıklı Not Ortalaması Hesaplama – Vize Final Notu | PratikHesap",
     metaDescription: "Vize, final ve ödev notlarını kendi yüzdeleriyle birleştirin. Ağırlık toplamı %100 olacak şekilde dönem notunuzu hesaplayın.",
@@ -371,7 +678,7 @@ export const tools: ToolDefinition[] = [
     fields: [numberField("score1", "Değerlendirme notu", "Örn. 70", "puan")]
   },
   {
-    id: "finalde-gerekli-not-hesaplama", name: "Finalde gerekli not hesaplama", category: "egitim", isNew: true,
+    id: "finalde-gerekli-not-hesaplama", name: "Finalde gerekli not hesaplama", category: "egitim",
     description: "Hedef dönem ortalaması için finalden almanız gereken notu öğrenin.",
     title: "Finalde Kaç Almalıyım? Gerekli Final Notu Hesaplama | PratikHesap",
     metaDescription: "Ara sınav notunuzu, final yüzdesini ve hedef ortalamayı girin; hedefe ulaşmak için finalde gereken notu hesaplayın.",
@@ -385,7 +692,7 @@ export const tools: ToolDefinition[] = [
     ]
   },
   {
-    id: "kredi-taksit-hesaplama", name: "Kredi taksit hesaplama", category: "finans", isNew: true,
+    id: "kredi-taksit-hesaplama", name: "Kredi taksit hesaplama", category: "finans",
     description: "Kredi tutarı, aylık faiz ve vadeye göre yaklaşık eşit taksiti bulun.",
     title: "Kredi Taksit Hesaplama – Aylık Taksit ve Geri Ödeme | PratikHesap",
     metaDescription: "Kredi tutarı, aylık faiz oranı ve vade ayını girin; yaklaşık eşit taksiti, toplam geri ödemeyi ve faiz tutarını görün.",
@@ -401,7 +708,7 @@ export const tools: ToolDefinition[] = [
     mode: "loan-plan"
   },
   {
-    id: "bilesik-faiz-hesaplama", name: "Bileşik faiz hesaplama", category: "finans", isNew: true,
+    id: "bilesik-faiz-hesaplama", name: "Bileşik faiz hesaplama", category: "finans",
     description: "Başlangıç tutarını faiz sıklığı ve süreyle bileşik olarak hesaplayın.",
     title: "Bileşik Faiz Hesaplama – Faiz Getirisi ve Dönem Sonu Tutarı | PratikHesap",
     metaDescription: "Başlangıç tutarı, yıllık oran ve süreyle bileşik faiz hesabı yapın; yıllık, aylık veya günlük bileşikleşme sıklığını seçin.",
@@ -421,7 +728,7 @@ export const tools: ToolDefinition[] = [
     ]
   },
   {
-    id: "basit-faiz-hesaplama", name: "Basit faiz hesaplama", category: "finans", isNew: true,
+    id: "basit-faiz-hesaplama", name: "Basit faiz hesaplama", category: "finans",
     description: "Anapara, yıllık faiz oranı ve gün sayısıyla basit faiz getirisini hesaplayın.",
     title: "Basit Faiz Hesaplama – Faiz Getirisi ve Anapara | PratikHesap",
     metaDescription: "Anapara, yıllık faiz oranı ve gün sayısını girerek 365 günlük yıl varsayımıyla basit faiz getirisini ve dönem sonu tutarını hesaplayın.",
@@ -435,7 +742,7 @@ export const tools: ToolDefinition[] = [
     ]
   },
   {
-    id: "doviz-hesaplama", name: "Döviz hesaplama", category: "finans", isNew: true,
+    id: "doviz-hesaplama", name: "Döviz hesaplama", category: "finans",
     description: "TCMB gösterge satış kuruyla döviz tutarının yaklaşık TL karşılığını bulun.",
     title: "Döviz Hesaplama – Güncel TCMB Kuruyla TL Çevirici | PratikHesap",
     metaDescription: "Döviz miktarını seçin; TCMB'nin yayımladığı satış kuruna göre yaklaşık Türk lirası karşılığını, kur tarihini ve birimini görün.",
@@ -453,7 +760,7 @@ export const tools: ToolDefinition[] = [
     mode: "currency"
   },
   {
-    id: "yakit-tuketimi-hesaplama", name: "Yakıt tüketimi hesaplama", category: "gunluk-yasam", isNew: true,
+    id: "yakit-tuketimi-hesaplama", name: "Yakıt tüketimi hesaplama", category: "gunluk-yasam",
     description: "Mesafe ve yakıt miktarından 100 km tüketimini ve yakıt maliyetini bulun.",
     title: "Yakıt Tüketimi Hesaplama – Araç 100 km'de Kaç Litre Yakar? | PratikHesap",
     metaDescription: "Gidilen mesafe, harcanan benzin veya motorin ve litre fiyatıyla aracın L/100 km tüketimini ve yakıt maliyetini hesaplayın.",
@@ -467,7 +774,7 @@ export const tools: ToolDefinition[] = [
     ]
   },
   {
-    id: "elektrik-faturasi-hesaplama", name: "Elektrik tüketim maliyeti", category: "gunluk-yasam", isNew: true,
+    id: "elektrik-faturasi-hesaplama", name: "Elektrik tüketim maliyeti", category: "gunluk-yasam",
     description: "kWh tüketimi ve birim fiyatla yaklaşık enerji bedelini hesaplayın.",
     title: "Elektrik Faturası Hesaplama – kWh Tüketim Maliyeti | PratikHesap",
     metaDescription: "Elektrik tüketiminizi kWh, enerji birim fiyatını TL/kWh olarak girin; yaklaşık enerji bedelinizi hesaplayın.",
@@ -488,7 +795,7 @@ export const tools: ToolDefinition[] = [
     mode: "electricity"
   },
   {
-    id: "pazaryeri-net-kar-hesaplama", name: "Pazaryeri net kâr hesaplama", category: "finans", isNew: true,
+    id: "pazaryeri-net-kar-hesaplama", name: "Pazaryeri net kâr hesaplama", category: "finans", createdAt: "2026-11-05T10:35:47+03:00",
     description: "Ürün maliyeti, indirim, komisyon ve ek giderlere göre tahmini satış kârını hesaplayın.",
     title: "Pazaryeri Net Kâr Hesaplama – Komisyon ve Gider Sonrası | PratikHesap",
     metaDescription: "Satış fiyatı, maliyet, indirim, komisyon ve giderleri girerek pazaryeri satışından kalan tahmini kârı ve oranları hesaplayın.",
@@ -510,7 +817,7 @@ export const tools: ToolDefinition[] = [
     ]
   },
   {
-    id: "birim-fiyat-karsilastirma", name: "Birim fiyat karşılaştırma", category: "gunluk-yasam", isNew: true,
+    id: "birim-fiyat-karsilastirma", name: "Birim fiyat karşılaştırma", category: "gunluk-yasam", createdAt: "2026-11-05T10:35:47+03:00",
     description: "Paket fiyatlarını uyumlu miktar birimine göre karşılaştırıp ekonomik seçeneği bulun.",
     title: "Birim Fiyat Karşılaştırma – Hangi Paket Daha Ekonomik? | PratikHesap",
     metaDescription: "İki veya daha fazla ürünün fiyat, miktar ve paket adedini girin; ortak birim fiyatlarını karşılaştırarak ekonomik seçeneği bulun.",
@@ -529,7 +836,7 @@ export const tools: ToolDefinition[] = [
     ]
   },
   {
-    id: "aylik-katkili-birikim-hesaplama", name: "Aylık katkılı birikim hesaplama", category: "finans", isNew: true,
+    id: "aylik-katkili-birikim-hesaplama", name: "Aylık katkılı birikim hesaplama", category: "finans", createdAt: "2026-11-05T10:35:47+03:00",
     description: "Başlangıç birikimi ve düzenli aylık katkıların varsayımsal dönem sonu tutarını görün.",
     title: "Aylık Katkılı Birikim Hesaplama – Düzenli Yatırım Tahmini | PratikHesap",
     metaDescription: "Başlangıç tutarı, aylık katkı, varsayımsal yıllık oran ve süreyle katkı toplamını ve tahmini getiriyi ayrı hesaplayın.",
@@ -550,7 +857,7 @@ export const tools: ToolDefinition[] = [
     ]
   },
   {
-    id: "yolculuk-maliyeti-hesaplama", name: "Yolculuk maliyeti hesaplama", category: "gunluk-yasam", isNew: true,
+    id: "yolculuk-maliyeti-hesaplama", name: "Yolculuk maliyeti hesaplama", category: "gunluk-yasam", createdAt: "2026-11-05T10:35:47+03:00",
     description: "Girilen mesafe, araç tüketimi, yakıt fiyatı ve diğer giderlerle yol maliyetini tahmin edin.",
     title: "Yolculuk Maliyeti Hesaplama – Yakıt ve Kişi Başı Tutar | PratikHesap",
     metaDescription: "Mesafe, 100 km yakıt tüketimi, litre fiyatı, geçiş giderleri ve kişi sayısıyla yolculuk maliyetini hesaplayın.",
@@ -571,7 +878,7 @@ export const tools: ToolDefinition[] = [
     ]
   },
   {
-    id: "desi-hacim-hesaplama", name: "Desi ve hacim ağırlığı hesaplama", category: "gunluk-yasam", isNew: true,
+    id: "desi-hacim-hesaplama", name: "Desi ve hacim ağırlığı hesaplama", category: "gunluk-yasam", createdAt: "2026-11-05T10:35:47+03:00",
     description: "Paket ölçüleri ve girilen desi böleniyle hacim ağırlığını hesaplayın.",
     title: "Desi Hesaplama – Kargo Hacim Ağırlığı ve Paket Hacmi | PratikHesap",
     metaDescription: "Paket en, boy ve yüksekliğini, ölçü birimini ve taşıyıcı desi bölenini girerek desi ile hacim ağırlığını hesaplayın.",
@@ -591,7 +898,7 @@ export const tools: ToolDefinition[] = [
     ]
   },
   {
-    id: "is-gunu-hesaplama", name: "İş günü hesaplama", category: "tarih", isNew: true,
+    id: "is-gunu-hesaplama", name: "İş günü hesaplama", category: "tarih",
     description: "İki tarih arasındaki seçtiğiniz çalışma günlerini sayın; tatilleri siz tanımlayın.",
     title: "İş Günü Hesaplama – İki Tarih Arası Hafta İçi Gün Sayısı | PratikHesap",
     metaDescription: "Başlangıç ve bitiş dahil seçenekleri, cumartesi çalışma seçimi ve kullanıcı tanımlı tam gün tatillerle iş günü sayısını hesaplayın.",
@@ -608,6 +915,15 @@ export const tools: ToolDefinition[] = [
     ]
   }
 ];
+
+export const legacyCalculatorRedirects: Record<string, string> = {
+  "/not-ortalamasi-hesaplama": "/not-ortalamasi-gano-hesaplama",
+  "/ders-ortalamasi-hesaplama": "/not-ortalamasi-gano-hesaplama",
+  "/maas-zam-hesaplama": "/maas-zam-artis-hesaplama",
+  "/maas-artis-hesaplama": "/maas-zam-artis-hesaplama"
+};
+const hiddenLegacyIds = new Set(["not-ortalamasi-hesaplama", "ders-ortalamasi-hesaplama", "maas-zam-hesaplama", "maas-artis-hesaplama"]);
+export const tools = toolCatalog.filter((tool) => !hiddenLegacyIds.has(tool.id));
 
 export const getTool = (slug: string): ToolDefinition | undefined => tools.find((tool) => tool.id === slug);
 export const getCategory = (id: string) => categories.find((category) => category.id === id);

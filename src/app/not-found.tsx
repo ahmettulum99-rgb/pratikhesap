@@ -1,8 +1,18 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { getOpenGraphImageUrl } from "@/lib/seo/metadata";
 
+const title = "Sayfa Bulunamadı | PratikHesap";
+const description = "Aradığınız sayfayı bulamadık. PratikHesap'ta yüzde, maaş, KDV, tarih ve eğitim hesaplama araçlarını keşfedin.";
 export const metadata: Metadata = {
-  title: "Sayfa Bulunamadı | PratikHesap",
+  title,
+  description,
+  openGraph: {
+    title,
+    description,
+    images: [{ url: getOpenGraphImageUrl(title), width: 1200, height: 630, alt: title }]
+  },
+  twitter: { card: "summary_large_image", title, description, images: [getOpenGraphImageUrl(title)] },
   robots: { index: false, follow: true }
 };
 

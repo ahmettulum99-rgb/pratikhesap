@@ -8,7 +8,7 @@ export function CategoryLanding({ categoryId }: { categoryId: CategoryId }) {
   const category = categories.find((item) => item.id === categoryId)!;
   const categoryTools = tools
     .filter((tool) => tool.category === categoryId)
-    .map(({ id, name, category, description }) => ({ id, name, category, description }));
+    .map(({ id, name, category, description, createdAt }) => ({ id, name, category, description, createdAt }));
   return (
     <div className="container-page py-10 sm:py-14">
       <PageStructuredData name={`${category.name} hesaplama araçları`} description={category.description} path={category.href} />
