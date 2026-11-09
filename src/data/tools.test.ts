@@ -54,7 +54,8 @@ describe("calculator catalog", () => {
     expect(config && getPayrollConfigTodo(config)).toEqual([
       "SGK prime esas kazanç üst sınırı",
       "gelir vergisi ücret tarifesi dilim ve oranları",
-      "asgari ücret gelir vergisi istisnası hesap yöntemi"
+      "asgari ücret gelir vergisi istisnası hesap yöntemi",
+      "asgari ücret damga vergisi istisnası hesap yöntemi"
     ]);
   });
 

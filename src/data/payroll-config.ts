@@ -29,6 +29,7 @@ export type PayrollYearConfig = {
   };
   stampTax: {
     rate: number;
+    minimumWageExemptionMethodVerified: boolean;
     source: OfficialSource;
   };
 };
@@ -83,6 +84,7 @@ export const payrollConfigs: Partial<Record<number, PayrollYearConfig>> = {
     },
     stampTax: {
       rate: 0.00759,
+      minimumWageExemptionMethodVerified: false,
       source: {
         name: "488 sayılı Damga Vergisi Kanunu",
         url: "https://www.mevzuat.gov.tr/mevzuatmetin/1.5.488.pdf",
@@ -97,6 +99,7 @@ export function getPayrollConfigTodo(config: PayrollYearConfig): string[] {
   if (config.socialSecurity.baseCeiling === null) missing.push("SGK prime esas kazanç üst sınırı");
   if (!config.incomeTax.brackets) missing.push("gelir vergisi ücret tarifesi dilim ve oranları");
   if (!config.incomeTax.minimumWageExemptionMethodVerified) missing.push("asgari ücret gelir vergisi istisnası hesap yöntemi");
+  if (!config.stampTax.minimumWageExemptionMethodVerified) missing.push("asgari ücret damga vergisi istisnası hesap yöntemi");
   return missing;
 }
 

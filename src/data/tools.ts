@@ -274,7 +274,7 @@ const toolCatalog: ToolDefinition[] = [
     description: "Brüt-net bordro kapsamını, 2026 resmî kaynaklarını ve doğrulama durumunu inceleyin.",
     title: "Brüt Net Maaş Hesaplama 2026 – 12 Aylık Bordro | PratikHesap",
     metaDescription: "Brüt-net maaş hesabında gereken 2026 resmî parametrelerini ve kaynaklarını görün. Doğrulanmamış veriler tahmin edilmediği için hesaplama geçici olarak kapalıdır.",
-    intro: "Bu araç için brüt/net yönü, aylık/yıllık ücret, çalışma ayı ve engellilik indirimi alanları hazırlandı. Yanlış bordro sonucu vermemek için 2026 gelir vergisi dilimleri, SGK tavanı ve asgari ücret istisnası hesabı resmî kaynakta doğrulanana kadar hesaplama kapalıdır.",
+    intro: "Bu araç için brüt/net yönü, aylık/yıllık ücret, çalışma ayı ve engellilik indirimi alanları hazırlandı. Yanlış bordro sonucu vermemek için 2026 gelir vergisi dilimleri, SGK tavanı ve asgari ücret vergi istisnalarının hesap yöntemleri resmî kaynakta doğrulanana kadar hesaplama kapalıdır.",
     formula: "Net ücret = brüt ücret − SGK işçi primi − işsizlik sigortası işçi primi − gelir vergisi (asgari ücret istisnası sonrası) − damga vergisi (asgari ücret istisnası sonrası). İşveren maliyeti = brüt ücret + işveren SGK primi + işveren işsizlik primi. Gelir vergisi kümülatif matraha göre hesaplanır.",
     example: "Araç, girilen aylık brüt tutardan ay ay yasal kesintileri ve istisnaları düşerek tahmini neti bulur. Netten brüte modunda ise girilen net tutarı sağlayan brütü her ayın kümülatif vergi matrahına göre çözer.",
     content: {
@@ -296,7 +296,7 @@ const toolCatalog: ToolDefinition[] = [
         { question: "Asgari ücret istisnası tüm ücretlerden düşülür mü?", answer: "Hesaplama, yapılandırılmış yıl parametreleri kapsamında gelir ve damga vergisi istisnasını uygular; istisna kesintiyi sıfırlamakla sınırlıdır ve net ödemeyi aşan bir vergi iadesi oluşturmaz." },
         { question: "İşveren maliyeti hangi kalemleri içerir?", answer: "Brüt ücret ile yapılandırılmış oranlara göre hesaplanan işveren SGK ve işsizlik primlerini içerir. Teşvik, yan hak, fazla mesai ve diğer işveren giderleri dahil değildir." },
         { question: "Hesaplama resmî bordro veya vergi danışmanlığı yerine geçer mi?", answer: "Hayır. Etkinleştirildiğinde de sonuç bilgilendirme amaçlı bir tahmin olacaktır. Kesin bordro ve kişisel durumunuz için işveren bordro birimine veya yetkin bir uzmana başvurun." },
-        { question: "Hesaplama neden şu an kullanılamıyor?", answer: "Yanlış sonuç göstermemek için SGK prime esas kazanç üst sınırı, ücret gelirleri vergi dilimleri ve asgari ücret gelir vergisi istisnası yöntemi resmî kaynakta doğrulanana kadar hesaplama kapalı tutuluyor." }
+        { question: "Hesaplama neden şu an kullanılamıyor?", answer: "Yanlış sonuç göstermemek için SGK prime esas kazanç üst sınırı, ücret gelirleri vergi dilimleri ile asgari ücret gelir ve damga vergisi istisnalarının hesap yöntemleri resmî kaynakta doğrulanana kadar hesaplama kapalı tutuluyor." }
       ],
       lastUpdated: "2026-11-05",
       sources: [

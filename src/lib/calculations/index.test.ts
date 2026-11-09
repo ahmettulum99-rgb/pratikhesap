@@ -77,6 +77,7 @@ const payrollTestConfig: CompletePayrollYearConfig = {
   },
   stampTax: {
     rate: 0.00759,
+    minimumWageExemptionMethodVerified: true,
     source: { name: "Test", url: "https://example.test", reference: "Yalnızca test verisi." }
   }
 };
